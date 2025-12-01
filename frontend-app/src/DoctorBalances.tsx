@@ -1,0 +1,184 @@
+import { useEffect, useState } from 'react';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Typography from '@mui/material/Typography';
+import TextField from '@mui/material/TextField';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Paper from '@mui/material/Paper';
+import LoadingSpinner from './components/LoadingSpinner';
+import GlobalSnackbar from './components/GlobalSnackbar';
+import Box from '@mui/material/Box';
+import TableSortLabel from '@mui/material/TableSortLabel';
+
+export default function DoctorBalances() {
+  const [balances, setBalances] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  useEffect(() => {
+    fetchBalances();
+  }, []);
+
+  const fetchBalances = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+  const res = await fetch('/api/doctor-wallet/balance/company', { headers: { 'x-user-id': '1' } });
+      if (!res.ok) throw new Error('Failed to fetch doctor balances');
+      setBalances(await res.json());
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filtered = balances.filter((b: any) => {
+    const text = [
+      b.doctor?.doctorId || b.doctor?.id,
+      b.doctor?.name || '',
+      b.doctor?.specialization || '',
+      b.doctor?.phoneNumber || '',
+      b.doctor?.email || '',
+      b.balance
+    ].join(' ').toLowerCase();
+    return text.includes(search.toLowerCase());
+  });
+
+  const sorted = [...filtered].sort((a: any, b: any) => {
+    let aVal, bVal;
+    if (sortBy === 'doctorId') {
+      aVal = a.doctor?.doctorId || a.doctor?.id || '';
+      bVal = b.doctor?.doctorId || b.doctor?.id || '';
+    } else if (sortBy === 'balance') {
+      aVal = a.balance;
+      bVal = b.balance;
+    } else {
+      aVal = a.doctor?.[sortBy] || '';
+      bVal = b.doctor?.[sortBy] || '';
+    }
+    if (aVal == null) aVal = '';
+    if (bVal == null) bVal = '';
+    if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+    if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+    if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // Helper to handle sort toggling
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+  };
+  return (
+    <Box sx={{ flex: 1, width: '100%', minHeight: 'calc(100vh - 64px)', background: '#f5f5f5', p: { xs: 1, sm: 1 }, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
+      <Card sx={{ width: '100%', maxWidth: 1100, m: '0 auto', mb: 3, boxShadow: 2, borderRadius: 3, background: '#f9fafb' }}>
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: '#1976d2', mb: 2, pl: 1 }}>
+            Doctor Balances
+          </Typography>
+          <TextField
+            type="text"
+            placeholder="Search doctor balances..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            size="small"
+            sx={{ width: { xs: '100%', sm: 260 }, background: '#fff', borderRadius: 1, mb: 2 }}
+            InputProps={{ sx: { fontSize: 16 } }}
+          />
+          {loading && <LoadingSpinner />}
+          <GlobalSnackbar open={!!error} message={error || ''} severity="error" onClose={() => setError(null)} />
+          <GlobalSnackbar open={!!success} message={success || ''} severity="success" onClose={() => setSuccess(null)} />
+          <TableContainer component={Paper} sx={{ mt: 0, width: '100%', boxShadow: 0, borderRadius: 0 }}>
+            <Table size="small" sx={{ minWidth: 900 }}>
+              <TableHead sx={{ position: 'sticky', top: 0, background: '#f7f7f7', zIndex: 1 }}>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 700, width: '10%' }}>
+                    <TableSortLabel
+                      active={sortBy === 'doctorId'}
+                      direction={sortBy === 'doctorId' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('doctorId')}
+                    >
+                      Doctor ID
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 700, width: '18%' }}>
+                    <TableSortLabel
+                      active={sortBy === 'name'}
+                      direction={sortBy === 'name' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('name')}
+                    >
+                      Name
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 700, width: '16%' }}>
+                    <TableSortLabel
+                      active={sortBy === 'specialization'}
+                      direction={sortBy === 'specialization' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('specialization')}
+                    >
+                      Specialization
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 700, width: '16%' }}>
+                    <TableSortLabel
+                      active={sortBy === 'phoneNumber'}
+                      direction={sortBy === 'phoneNumber' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('phoneNumber')}
+                    >
+                      Phone Number
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 700, width: '20%' }}>
+                    <TableSortLabel
+                      active={sortBy === 'email'}
+                      direction={sortBy === 'email' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('email')}
+                    >
+                      Email
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 700, width: '12%' }}>
+                    <TableSortLabel
+                      active={sortBy === 'balance'}
+                      direction={sortBy === 'balance' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('balance')}
+                    >
+                      Balance
+                    </TableSortLabel>
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {sorted.map((b: any, idx: number) => (
+                  <TableRow key={b.doctor?.doctorId || b.doctor?.id} sx={{ background: idx % 2 === 0 ? '#fff' : '#f9fafb' }}>
+                    <TableCell>{b.doctor?.doctorId || b.doctor?.id}</TableCell>
+                    <TableCell>{b.doctor?.name || ''}</TableCell>
+                    <TableCell>{b.doctor?.specialization || ''}</TableCell>
+                    <TableCell>{b.doctor?.phoneNumber || ''}</TableCell>
+                    <TableCell>{b.doctor?.email || ''}</TableCell>
+                    <TableCell>{typeof b.balance === 'number' ? b.balance.toFixed(2) : b.balance}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </CardContent>
+      </Card>
+    </Box>
+  );
+}
