@@ -1,0 +1,2 @@
+run db/migration/ve_create_company_table.sql in mysql
+start java application

@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "dcas-frontend": "file:frontend"
+  }
+}
