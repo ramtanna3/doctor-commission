@@ -1,6 +1,7 @@
 package com.org.app.dcas.controller;
 
 import com.org.app.dcas.dto.DoctorWalletBalanceResponse;
+import com.org.app.dcas.dto.DoctorPayoutRequest;
 import com.org.app.dcas.dto.DoctorWalletLedgerListResponse;
 import com.org.app.dcas.dto.DoctorWalletTransactionRequest;
 import com.org.app.dcas.model.DoctorWalletLedger;
@@ -13,6 +14,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/doctor-wallet")
 public class DoctorWalletController {
+
+    @PostMapping("/payout-commission")
+    public ResponseEntity<String> payoutCommission(@RequestBody DoctorPayoutRequest request) {
+        int count = doctorWalletService.payoutCommission(request);
+        return ResponseEntity.ok("Payout commission entries created: " + count);
+    }
 
     private final DoctorWalletService doctorWalletService;
 

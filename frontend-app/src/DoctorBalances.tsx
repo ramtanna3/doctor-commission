@@ -10,6 +10,8 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
+import Checkbox from '@mui/material/Checkbox';
+import Button from '@mui/material/Button';
 import LoadingSpinner from './components/LoadingSpinner';
 import GlobalSnackbar from './components/GlobalSnackbar';
 import Box from '@mui/material/Box';
@@ -23,6 +25,9 @@ export default function DoctorBalances() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [selected, setSelected] = useState<string[]>([]); // doctorId or id
+  // Helper to get doctor id
+  const getDoctorId = (b: any) => b.doctor?.doctorId || b.doctor?.id;
 
   useEffect(() => {
     fetchBalances();
@@ -75,6 +80,24 @@ export default function DoctorBalances() {
     return 0;
   });
 
+  // Select all logic (only for negative balances)
+  // Treat -0 as 0 for selection logic
+  const isTrulyNegative = (balance: number) => Number(balance) < 0 && Math.abs(Number(balance)) > 1e-8;
+  const negativeIds = sorted.filter(b => isTrulyNegative(b.balance)).map(getDoctorId);
+  const isAllSelected = negativeIds.length > 0 && selected.length === negativeIds.length && negativeIds.every(id => selected.includes(id));
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelected(negativeIds);
+    } else {
+      setSelected([]);
+    }
+  };
+
+  // Select single row
+  const handleSelect = (id: string) => {
+    setSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
   // Helper to handle sort toggling
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -103,10 +126,54 @@ export default function DoctorBalances() {
           {loading && <LoadingSpinner />}
           <GlobalSnackbar open={!!error} message={error || ''} severity="error" onClose={() => setError(null)} />
           <GlobalSnackbar open={!!success} message={success || ''} severity="success" onClose={() => setSuccess(null)} />
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+            <Button
+              variant="contained"
+              color="primary"
+              disabled={selected.length === 0}
+              onClick={async () => {
+                setLoading(true);
+                setError(null);
+                setSuccess(null);
+                try {
+                  const doctorBalances = sorted
+                    .filter(b => selected.includes(getDoctorId(b)))
+                    .map(b => ({ doctorId: b.doctor?.doctorId || b.doctor?.id, balance: b.balance }));
+                  const res = await fetch('/api/doctor-wallet/payout-commission', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'x-user-id': '1',
+                    },
+                    body: JSON.stringify({ doctorBalances }),
+                  });
+                  if (!res.ok) throw new Error('Failed to payout commission');
+                  const msg = await res.text();
+                  setSuccess(msg);
+                  setSelected([]);
+                  await fetchBalances();
+                } catch (e: any) {
+                  setError(e.message || 'Error occurred');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              Payout Commission
+            </Button>
+          </Box>
           <TableContainer component={Paper} sx={{ mt: 0, width: '100%', boxShadow: 0, borderRadius: 0 }}>
             <Table size="small" sx={{ minWidth: 900 }}>
               <TableHead sx={{ position: 'sticky', top: 0, background: '#f7f7f7', zIndex: 1 }}>
                 <TableRow>
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      indeterminate={selected.length > 0 && selected.length < negativeIds.length}
+                      checked={isAllSelected}
+                      onChange={handleSelectAll}
+                      inputProps={{ 'aria-label': 'select all negative balance doctors' }}
+                    />
+                  </TableCell>
                   <TableCell sx={{ fontWeight: 700, width: '10%' }}>
                     <TableSortLabel
                       active={sortBy === 'doctorId'}
@@ -164,16 +231,28 @@ export default function DoctorBalances() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {sorted.map((b: any, idx: number) => (
-                  <TableRow key={b.doctor?.doctorId || b.doctor?.id} sx={{ background: idx % 2 === 0 ? '#fff' : '#f9fafb' }}>
-                    <TableCell>{b.doctor?.doctorId || b.doctor?.id}</TableCell>
-                    <TableCell>{b.doctor?.name || ''}</TableCell>
-                    <TableCell>{b.doctor?.specialization || ''}</TableCell>
-                    <TableCell>{b.doctor?.phoneNumber || ''}</TableCell>
-                    <TableCell>{b.doctor?.email || ''}</TableCell>
-                    <TableCell>{typeof b.balance === 'number' ? b.balance.toFixed(2) : b.balance}</TableCell>
-                  </TableRow>
-                ))}
+                {sorted.map((b: any, idx: number) => {
+                  const id = getDoctorId(b);
+                  const isNegative = isTrulyNegative(b.balance);
+                  return (
+                    <TableRow key={id} sx={{ background: idx % 2 === 0 ? '#fff' : '#f9fafb' }}>
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          checked={selected.includes(id)}
+                          onChange={() => handleSelect(id)}
+                          inputProps={{ 'aria-label': `select doctor ${id}` }}
+                          disabled={!isNegative}
+                        />
+                      </TableCell>
+                      <TableCell>{id}</TableCell>
+                      <TableCell>{b.doctor?.name || ''}</TableCell>
+                      <TableCell>{b.doctor?.specialization || ''}</TableCell>
+                      <TableCell>{b.doctor?.phoneNumber || ''}</TableCell>
+                      <TableCell>{b.doctor?.email || ''}</TableCell>
+                      <TableCell>{typeof b.balance === 'number' ? (Math.abs(b.balance) < 1e-8 ? '0.00' : b.balance.toFixed(2)) : b.balance}</TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TableContainer>

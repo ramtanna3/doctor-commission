@@ -3,6 +3,7 @@ package com.org.app.dcas.service;
 import com.org.app.dcas.context.CompanyContext;
 import com.org.app.dcas.dto.DoctorWalletBalanceResponse;
 import com.org.app.dcas.dto.DoctorWalletLedgerListResponse;
+import com.org.app.dcas.dto.DoctorPayoutRequest;
 import com.org.app.dcas.dto.DoctorWalletLedgerResponse;
 import com.org.app.dcas.model.DoctorMaster;
 import com.org.app.dcas.model.DoctorWalletLedger;
@@ -20,6 +21,32 @@ import java.util.Set;
 
 @Service
 public class DoctorWalletService {
+
+    @Transactional
+    public int payoutCommission(DoctorPayoutRequest request) {
+        int count = 0;
+        if (request == null || request.getDoctorBalances() == null) return 0;
+        for (DoctorPayoutRequest.DoctorBalance db : request.getDoctorBalances()) {
+            if (db.doctorId != null && db.balance < 0) {
+                DoctorMaster doctor = doctorMasterRepository.findById(db.doctorId)
+                        .orElse(null);
+                if (doctor != null) {
+                    DoctorWalletLedger ledger = new DoctorWalletLedger();
+                    ledger.setDoctor(doctor);
+                    ledger.setTransactionDate(LocalDate.now());
+                    ledger.setReferenceType(DoctorWalletLedger.ReferenceType.PAYOUT);
+                    ledger.setCreditAmount(BigDecimal.valueOf(Math.abs(db.balance)));
+                    ledger.setDebitAmount(BigDecimal.ZERO);
+                    ledger.setRemarks("Payout commission for negative balance");
+                    String userIdStr = companyContext.getUserId() != null ? companyContext.getUserId().toString() : "system";
+                    ledger.setCreatedBy(userIdStr);
+                    walletLedgerRepository.save(ledger);
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
 
     private final DoctorWalletLedgerRepository walletLedgerRepository;
     private final DoctorMasterRepository doctorMasterRepository;
