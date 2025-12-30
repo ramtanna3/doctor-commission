@@ -1,0 +1,39 @@
+========== Environment Setup ==========
+Database - 
+Open MySQL Workbench
+
+Click on Localhost 3306
+Schema = dcas_db
+
+
+Java Service - 
+DcasApplication.java -> Select and click on Run
+
+
+UI Service
+Click on New Terminal
+cd frontend-app
+npm run dev 
+
+
+====== NEW APPLICATION SETUP ======
+
+Step 1:
+Copy the script from
+db/migration/V1_Create_Company_Table.sql in mysql and run all
+
+Step 2:
+Ensure users and company tables has Ids as 1,2,3
+
+Step 3:
+Open UI - http://localhost:5173/
+Bulk Master Upload
+upload resouces/doctor_commission_master_template (1).xlsx
+
+Step 4:
+Update company Id in users Table
+
+Step 5:
+Process Sales File - 
+resources/PHARMA RIO PIVOT TABLE-1.xlsx
+

@@ -1,3 +1,5 @@
+create schema dcas_db;
+
 USE dcas_db;
 
 -- =========================
@@ -268,3 +270,15 @@ CREATE TABLE doctor_wallet_ledger (
 );
 
 -- All tables now have created_by and updated_by as VARCHAR(100)
+
+INSERT INTO company (name, address, phone_number, email, is_active) VALUES
+  ('Acme Pharma', '123 Main St', '1234567890', 'info@acme.com', 1),
+  ('Beta Pharma', '456 Side St', '9876543210', 'contact@beta.com', 1),
+  ('Inactive Pharma', '789 Off Rd', '1112223333', 'inactive@pharma.com', 0);
+
+
+-- USERS
+INSERT INTO users (first_name, last_name, phone_number, email, is_active, company_id) VALUES
+  ('Admin', 'Acme', '8000011111', 'admin@acme.com', 1, 1),
+  ('User', 'Beta', '8000022222', 'user@beta.com', 1, 2),
+  ('Inactive', 'User', '8000033333', 'inactive@pharma.com', 0, 3);
