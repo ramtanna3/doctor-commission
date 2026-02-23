@@ -20,7 +20,7 @@ public class DcasApplication {
 			@Override
 			public void addCorsMappings(CorsRegistry registry) {
 				registry.addMapping("/**")
-					.allowedOrigins("http://localhost:5173") // Updated to match frontend port
+					.allowedOrigins("*") // Updated to match frontend port
 					.allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS");
 			}
 		};
