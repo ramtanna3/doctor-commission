@@ -13,7 +13,14 @@ import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import TextField from '@mui/material/TextField';
 import Box from '@mui/material/Box';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
 import Autocomplete from '@mui/material/Autocomplete';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
 
 const REFERENCE_TYPE_OPTIONS = [
   { value: 'ADVANCE_CREDIT', label: 'Advance Credit' },
@@ -33,6 +40,9 @@ export default function AddDoctorTransaction() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [useTotalDue, setUseTotalDue] = useState(false);
+  const [transactionSummary, setTransactionSummary] = useState<any>(null);
 
   useEffect(() => {
     fetchDoctors();
@@ -48,16 +58,43 @@ export default function AddDoctorTransaction() {
     }
   };
 
+  const fetchWalletBalance = async (selectedDoctorId: string) => {
+    if (!selectedDoctorId) {
+      setWalletBalance(null);
+      setUseTotalDue(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/doctor-wallet/balance/${selectedDoctorId}`, { headers: { 'x-user-id': '1' } });
+      if (!res.ok) throw new Error('Failed to fetch wallet balance');
+      const data = await res.json();
+      setWalletBalance(data.balance ?? null);
+      setUseTotalDue(false);
+    } catch (e: any) {
+      setWalletBalance(null);
+      setUseTotalDue(false);
+      setError(e.message);
+    }
+  };
+
   const handleReferenceTypeChange = (type: string) => {
+    // clear any Total Due selection and reset credit when changing type
+    setUseTotalDue(false);
+    setCreditAmount('');
     setReferenceType(type);
     if (type === 'ADVANCE_CREDIT' || type === 'PAYOUT') {
       setDebitAmount('0');
-      setCreditAmount('');
+      if (!useTotalDue) {
+        setCreditAmount('');
+      }
     } else if (type === 'SALE_COMMISSION') {
       setCreditAmount('0');
       setDebitAmount('');
     } else {
-      setCreditAmount('');
+      if (!useTotalDue) {
+        setCreditAmount('');
+      }
       setDebitAmount('');
     }
   };
@@ -97,16 +134,50 @@ export default function AddDoctorTransaction() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-            'x-user-id': '1',
+          'x-user-id': '1',
         },
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('Failed to add transaction');
-  setSuccess('Transaction added successfully!');
-  setShowSuccessDialog(true);
-  setCreditAmount('');
-  setDebitAmount('');
-  setRemarks('');
+
+      const respData = await res.json();
+
+      // Determine new balance from response if available
+      let newBalance: number | null = null;
+      if (respData) {
+        newBalance = respData.balance ?? respData.updatedBalance ?? respData.walletBalance ?? null;
+      }
+
+      // If backend didn't return a balance, fetch it fresh
+      if (newBalance === null) {
+        try {
+          const balRes = await fetch(`/api/doctor-wallet/balance/${doctorId}`, { headers: { 'x-user-id': '1' } });
+          if (balRes.ok) {
+            const balData = await balRes.json();
+            newBalance = balData.balance ?? null;
+            setWalletBalance(newBalance);
+          }
+        } catch (ignore) {
+          // keep newBalance as null
+        }
+      } else {
+        setWalletBalance(newBalance);
+      }
+
+      // Find doctor name if available
+      const doctorObj = doctors.find(d => String(d.doctorId || d.id) === String(doctorId));
+      const doctorName = doctorObj?.name || '';
+
+      // Recent transaction info (try to use explicit field, else use response body)
+      const recentTx = respData?.transaction ?? respData;
+
+      setTransactionSummary({ doctorId, doctorName, balance: newBalance, transaction: recentTx });
+
+      setSuccess('Transaction added successfully!');
+      setShowSuccessDialog(true);
+      setCreditAmount('');
+      setDebitAmount('');
+      setRemarks('');
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -128,7 +199,17 @@ export default function AddDoctorTransaction() {
                 options={doctors}
                 getOptionLabel={(d: any) => d?.name || `Doctor #${d?.doctorId || d?.id}`}
                 value={doctors.find((d: any) => String(d.doctorId || d.id) === String(doctorId)) || null}
-                onChange={(_e: any, newValue: any) => setDoctorId(newValue ? (newValue.doctorId || newValue.id) : '')}
+                onChange={(_e: any, newValue: any) => {
+                  const nextDoctorId = newValue ? (newValue.doctorId || newValue.id) : '';
+                  setDoctorId(nextDoctorId);
+                  setUseTotalDue(false);
+                  setCreditAmount('');
+                  if (nextDoctorId) {
+                    void fetchWalletBalance(String(nextDoctorId));
+                  } else {
+                    setWalletBalance(null);
+                  }
+                }}
                 isOptionEqualToValue={(option: any, value: any) => (option.doctorId || option.id) === (value?.doctorId || value?.id)}
                 filterOptions={(options, { inputValue }) =>
                   options.filter((d: any) => (d?.name || '').toLowerCase().includes(inputValue.trim().toLowerCase()))
@@ -154,6 +235,30 @@ export default function AddDoctorTransaction() {
                 </Select>
               </FormControl>
             </Box>
+            {walletBalance !== null && (
+              <Typography sx={{ fontWeight: 600, color: walletBalance < 0 ? 'error.main' : 'success.main' }}>
+                Wallet Balance: {walletBalance.toFixed(2)}
+              </Typography>
+            )}
+            {(referenceType === 'PAYOUT' || referenceType === 'ADJUSTMENT') && walletBalance !== null && walletBalance < 0 && (
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={useTotalDue}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setUseTotalDue(checked);
+                      if (checked) {
+                        setCreditAmount(Math.abs(walletBalance).toFixed(2));
+                      } else {
+                        setCreditAmount('');
+                      }
+                    }}
+                  />
+                }
+                label={`Pay Total Due (${Math.abs(walletBalance).toFixed(2)})`}
+              />
+            )}
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
               <TextField
                 label="Credit Amount"
@@ -191,13 +296,47 @@ export default function AddDoctorTransaction() {
               <Button type="submit" variant="contained" color="primary" disabled={loading} sx={{ minWidth: 140, height: 40, whiteSpace: 'nowrap', fontWeight: 600, fontSize: 16, px: 2, boxShadow: 1 }}>
                 {loading ? 'Adding...' : 'Add Transaction'}
               </Button>
-              <Button type="button" variant="outlined" color="secondary" disabled={loading} sx={{ minWidth: 100, height: 40, whiteSpace: 'nowrap', fontWeight: 600, fontSize: 16, px: 2 }} onClick={() => { setDoctorId(''); setReferenceType('ADVANCE_CREDIT'); setCreditAmount(''); setDebitAmount(''); setRemarks(''); }}>
+              <Button type="button" variant="outlined" color="secondary" disabled={loading} sx={{ minWidth: 100, height: 40, whiteSpace: 'nowrap', fontWeight: 600, fontSize: 16, px: 2 }} onClick={() => { setDoctorId(''); setReferenceType('ADVANCE_CREDIT'); setCreditAmount(''); setDebitAmount(''); setRemarks(''); setWalletBalance(null); setUseTotalDue(false); }}>
                 Cancel
               </Button>
             </Box>
             {loading && <LoadingSpinner />}
             <GlobalSnackbar open={!!error} message={error || ''} severity="error" onClose={() => setError(null)} />
-            <SuccessDialog open={showSuccessDialog} message={success || ''} onClose={() => setShowSuccessDialog(false)} />
+            <SuccessDialog
+              open={showSuccessDialog}
+              message={success || ''}
+              onClose={() => { setShowSuccessDialog(false); setTransactionSummary(null); }}
+              details={transactionSummary ? (
+                <Box sx={{ textAlign: 'left', px: 1 }}>
+                  <Typography sx={{ fontWeight: 600 }}>Doctor: {transactionSummary.doctorName || `#${transactionSummary.doctorId}`}</Typography>
+                  <Typography>Doctor ID: {transactionSummary.doctorId}</Typography>
+                  <Typography>Wallet Balance: {transactionSummary.balance !== null && transactionSummary.balance !== undefined ? transactionSummary.balance.toFixed(2) : 'N/A'}</Typography>
+                  {transactionSummary.transaction && (
+                    <Box sx={{ mt: 1 }}>
+                      <Typography sx={{ fontWeight: 600, mb: 1 }}>Recent Transaction</Typography>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Type</TableCell>
+                            <TableCell align="right">Credit</TableCell>
+                            <TableCell align="right">Debit</TableCell>
+                            <TableCell>Remarks</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          <TableRow>
+                            <TableCell>{transactionSummary.transaction.referenceType || transactionSummary.transaction.type || 'N/A'}</TableCell>
+                            <TableCell align="right">{transactionSummary.transaction.creditAmount ?? transactionSummary.transaction.credit ?? 'N/A'}</TableCell>
+                            <TableCell align="right">{transactionSummary.transaction.debitAmount ?? transactionSummary.transaction.debit ?? 'N/A'}</TableCell>
+                            <TableCell>{transactionSummary.transaction.remarks ?? transactionSummary.transaction.note ?? 'N/A'}</TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </Box>
+                  )}
+                </Box>
+              ) : undefined}
+            />
           </Stack>
         </form>
       </CardContent>

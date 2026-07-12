@@ -5,20 +5,27 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
 
 export interface SuccessDialogProps {
   open: boolean;
   message: string;
   onClose: () => void;
+  details?: React.ReactNode;
 }
 
-const SuccessDialog: React.FC<SuccessDialogProps> = ({ open, message, onClose }) => (
+const SuccessDialog: React.FC<SuccessDialogProps> = ({ open, message, onClose, details }) => (
   <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
     <DialogTitle>Success</DialogTitle>
     <DialogContent>
       <DialogContentText sx={{ textAlign: 'center', fontWeight: 600, fontSize: 18, py: 2 }}>
         {message}
       </DialogContentText>
+      {details && (
+        <Box sx={{ pt: 1 }}>
+          {details}
+        </Box>
+      )}
     </DialogContent>
     <DialogActions sx={{ justifyContent: 'center' }}>
       <Button onClick={onClose} variant="contained" color="primary" autoFocus>OK</Button>
