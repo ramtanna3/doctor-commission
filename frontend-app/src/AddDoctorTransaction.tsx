@@ -17,7 +17,7 @@ import Autocomplete from '@mui/material/Autocomplete';
 
 const REFERENCE_TYPE_OPTIONS = [
   { value: 'ADVANCE_CREDIT', label: 'Advance Credit' },
-  { value: 'SALE_COMMISSION', label: 'Sale Commission' },
+  { value: 'SALE_COMMISSION', label: 'Sale Promotional' },
   { value: 'PAYOUT', label: 'Payout' },
   { value: 'ADJUSTMENT', label: 'Adjustment' },
 ];
@@ -73,7 +73,7 @@ export default function AddDoctorTransaction() {
     ) return setError('Credit amount must be positive for Advance Credit.');
     if (
       referenceType === 'SALE_COMMISSION' && (!debitAmount || Number(debitAmount) <= 0)
-    ) return setError('Debit amount must be positive for Sale Commission.');
+    ) return setError('Debit amount must be positive for Sale Promotional.');
     if (
       referenceType === 'PAYOUT' && (!creditAmount || Number(creditAmount) <= 0)
     ) return setError('Credit amount must be positive for Payout.');

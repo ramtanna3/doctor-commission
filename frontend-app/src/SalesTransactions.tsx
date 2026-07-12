@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
-// import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -21,6 +21,7 @@ import ConfirmDialog from './components/ConfirmDialog';
 import Autocomplete from '@mui/material/Autocomplete';
 import MenuItem from '@mui/material/MenuItem';
 import Chip from '@mui/material/Chip';
+import { buildVisibleTransactionsForExport, exportTransactionsToExcel, exportTransactionsToPdf } from './utils/exportData';
 
 // import Stack from '@mui/material/Stack';
 
@@ -78,6 +79,40 @@ export default function SalesTransactions() {
     }
   };
 
+  const visibleTransactions = useMemo(() => buildVisibleTransactionsForExport(transactions, {
+    search,
+    statusFilter,
+    dateFrom,
+    dateTo,
+  }), [transactions, search, statusFilter, dateFrom, dateTo]);
+
+  const sortedTransactions = useMemo(() => {
+    return [...visibleTransactions].sort((a: any, b: any) => {
+      let aVal = a[sortBy];
+      let bVal = b[sortBy];
+      if (sortBy === 'doctor') {
+        aVal = a.doctor?.name || '';
+        bVal = b.doctor?.name || '';
+      } else if (sortBy === 'medical') {
+        aVal = a.medical?.name || '';
+        bVal = b.medical?.name || '';
+      } else if (sortBy === 'product') {
+        aVal = a.product?.name || '';
+        bVal = b.product?.name || '';
+      } else if (sortBy === 'date') {
+        aVal = a.date || a.transactionDate || '';
+        bVal = b.date || b.transactionDate || '';
+      }
+      if (aVal == null) aVal = '';
+      if (bVal == null) bVal = '';
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [visibleTransactions, sortBy, sortOrder]);
+
   const handleSort = (column: string) => {
     if (sortBy === column) {
       setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
@@ -85,6 +120,20 @@ export default function SalesTransactions() {
       setSortBy(column);
       setSortOrder('asc');
     }
+  };
+
+  const handleExportExcel = () => {
+    if (!selectedDistributor) return;
+    exportTransactionsToExcel(visibleTransactions, distributorName || 'sales-transactions');
+    setSuccess('Excel export started.');
+    setShowSuccessDialog(true);
+  };
+
+  const handleExportPdf = () => {
+    if (!selectedDistributor) return;
+    exportTransactionsToPdf(visibleTransactions, distributorName || 'sales-transactions');
+    setSuccess('PDF export started.');
+    setShowSuccessDialog(true);
   };
 
   // No row edit/delete handlers needed
@@ -147,7 +196,7 @@ export default function SalesTransactions() {
                   </Typography>
                 )}
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'nowrap' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'nowrap', width: '100%' }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#555', minWidth: 60 }}>
                   Filters
                 </Typography>
@@ -219,6 +268,26 @@ export default function SalesTransactions() {
                   size="small"
                   InputLabelProps={{ shrink: true }}
                 />
+                <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <IconButton
+                    onClick={handleExportExcel}
+                    disabled={!selectedDistributor || visibleTransactions.length === 0}
+                    aria-label="Export Excel"
+                    title="Export Excel"
+                    sx={{ p: 0.5 }}
+                  >
+                    <img src="/excel2-svgrepo-com.svg" alt="Excel" style={{ width: 22, height: 22, display: 'block' }} />
+                  </IconButton>
+                  <IconButton
+                    onClick={handleExportPdf}
+                    disabled={!selectedDistributor || visibleTransactions.length === 0}
+                    aria-label="Export PDF"
+                    title="Export PDF"
+                    sx={{ p: 0.5 }}
+                  >
+                    <img src="/pdf-file-svgrepo-com.svg" alt="PDF" style={{ width: 22, height: 22, display: 'block' }} />
+                  </IconButton>
+                </Box>
               </Box>
             </Box>
             <GlobalSnackbar open={!!error} message={error || ''} severity="error" onClose={() => setError(null)} />
@@ -314,7 +383,7 @@ export default function SalesTransactions() {
                       onClick={() => handleSort('commissionPercent')}
                       classes={{ root: 'MuiTableSortLabel-root', active: 'Mui-active', icon: 'MuiTableSortLabel-icon', iconDirectionAsc: 'MuiTableSortLabel-directionAsc' }}
                     >
-                      Commission %
+                      Promotional %
                     </TableSortLabel>
                   </TableCell>
                   <TableCell sx={{ fontWeight: 700, width: '10%', color: '#222', background: '#f7f7f7', fontSize: 15 }}>
@@ -324,7 +393,7 @@ export default function SalesTransactions() {
                       onClick={() => handleSort('commissionAmount')}
                       classes={{ root: 'MuiTableSortLabel-root', active: 'Mui-active', icon: 'MuiTableSortLabel-icon', iconDirectionAsc: 'MuiTableSortLabel-directionAsc' }}
                     >
-                      Commission Amount
+                      Promotional Amount
                     </TableSortLabel>
                   </TableCell>
                   <TableCell sx={{ fontWeight: 700, width: '8%', color: '#222', background: '#f7f7f7', fontSize: 15 }}>
@@ -341,59 +410,7 @@ export default function SalesTransactions() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {transactions
-                  .filter((t: any) => {
-                    // Status filter
-                    const isMatched = t.isMatched === true;
-                    if (!statusFilter.includes('matched') && isMatched) return false;
-                    if (!statusFilter.includes('unmatched') && !isMatched) return false;
-                    // Date range filter
-                    const dateStr = t.date || t.transactionDate || '';
-                    if (dateFrom && dateStr && dateStr < dateFrom) return false;
-                    if (dateTo && dateStr && dateStr > dateTo) return false;
-                    // Free text search
-                    if (!search) return true;
-                    const text = [
-                      t.salesTransactionId || t.transactionId || t.id,
-                      dateStr,
-                      t.doctor?.name || '',
-                      t.medical?.name || '',
-                      t.product?.name || '',
-                      t.qty || t.quantity,
-                      t.amount,
-                      t.commissionPercent,
-                      t.commissionAmount,
-                      t.status || (t.isMatched === false ? 'Unmatched' : 'Matched')
-                    ]
-                      .join(' ')
-                      .toLowerCase();
-                    return text.includes(search.toLowerCase());
-                  })
-                  .sort((a: any, b: any) => {
-                    let aVal = a[sortBy];
-                    let bVal = b[sortBy];
-                    if (sortBy === 'doctor') {
-                      aVal = a.doctor?.name || '';
-                      bVal = b.doctor?.name || '';
-                    } else if (sortBy === 'medical') {
-                      aVal = a.medical?.name || '';
-                      bVal = b.medical?.name || '';
-                    } else if (sortBy === 'product') {
-                      aVal = a.product?.name || '';
-                      bVal = b.product?.name || '';
-                    } else if (sortBy === 'date') {
-                      aVal = a.date || a.transactionDate || '';
-                      bVal = b.date || b.transactionDate || '';
-                    }
-                    if (aVal == null) aVal = '';
-                    if (bVal == null) bVal = '';
-                    if (typeof aVal === 'string') aVal = aVal.toLowerCase();
-                    if (typeof bVal === 'string') bVal = bVal.toLowerCase();
-                    if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
-                    if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
-                    return 0;
-                  })
-                  .map((t: any, idx: number) => (
+                {sortedTransactions.map((t: any, idx: number) => (
                     <TableRow key={t.salesTransactionId || t.transactionId || t.id} sx={{ background: idx % 2 === 0 ? '#fff' : '#f9fafb' }}>
                       <TableCell sx={{ width: '10%' }}>{t.date || t.transactionDate || ''}</TableCell>
                       <TableCell sx={{ width: '10%' }}>{t.voucherNo || ''}</TableCell>

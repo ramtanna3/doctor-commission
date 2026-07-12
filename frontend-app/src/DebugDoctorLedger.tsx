@@ -1,5 +1,5 @@
 // Debug utility to inspect the structure of the doctor ledger API response
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import LoadingSpinner from './components/LoadingSpinner';
 import GlobalSnackbar from './components/GlobalSnackbar';
 

@@ -41,7 +41,7 @@ const SIDEBAR_MODULES = [
       { key: 'doctor', label: 'Doctor', icon: <PersonIcon /> },
       { key: 'medical', label: 'Medical', icon: <MedicalServicesIcon /> },
       { key: 'product', label: 'Product', icon: <InventoryIcon /> },
-  { key: 'commission', label: 'Commission Setup', icon: <MonetizationOnIcon /> },
+  { key: 'commission', label: 'Promotional Setup', icon: <MonetizationOnIcon /> },
       { key: 'bulk-upload', label: 'Bulk Master Upload', icon: <UploadFileIcon /> },
     ],
   },

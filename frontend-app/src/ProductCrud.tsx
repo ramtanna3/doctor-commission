@@ -132,10 +132,6 @@ export default function ProductCrud() {
     }
   };
 
-  const handleDelete = (id: number) => {
-    setConfirmDeleteId(id);
-  };
-
   const handleConfirmDelete = async () => {
     if (!confirmDeleteId) return;
     setLoading(true);
@@ -195,7 +191,7 @@ export default function ProductCrud() {
                 />
                 <TextField
                   name="defaultCommissionPercentage"
-                  label="Default Commission %"
+                  label="Default Promotional %"
                   value={form.defaultCommissionPercentage ?? ''}
                   onChange={e => {
                     const val = e.target.value;
@@ -287,7 +283,7 @@ export default function ProductCrud() {
                         Description
                       </TableSortLabel>
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 700, width: '20%' }}>Default Commission %</TableCell>
+                    <TableCell sx={{ fontWeight: 700, width: '20%' }}>Default Promotional %</TableCell>
                     <TableCell sx={{ fontWeight: 700, width: '20%' }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>

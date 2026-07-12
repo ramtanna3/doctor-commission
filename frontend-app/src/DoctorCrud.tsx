@@ -177,10 +177,6 @@ export default function DoctorCrud() {
     }
   };
 
-  const handleDelete = (id: number) => {
-    setConfirmDeleteId(id);
-  };
-
   const handleConfirmDelete = async () => {
     if (!confirmDeleteId) return;
     setLoading(true);

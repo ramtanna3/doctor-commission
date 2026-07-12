@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import LoadingSpinner from './components/LoadingSpinner';
 import GlobalSnackbar from './components/GlobalSnackbar';
 import Card from '@mui/material/Card';
@@ -232,7 +232,7 @@ export default function DoctorTransactions() {
                     readOnly
                     style={{ marginRight: 8 }}
                   />
-                  {option.replace('_', ' ').replace('ADVANCE_CREDIT', 'Advance Credit').replace('PAYOUT', 'Payout').replace('ADJUSTMENT', 'Adjustment').replace('SALE_COMMISSION', 'Sale Commission')}
+                  {option.replace('_', ' ').replace('ADVANCE_CREDIT', 'Advance Credit').replace('PAYOUT', 'Payout').replace('ADJUSTMENT', 'Adjustment').replace('SALE_COMMISSION', 'Sale Promotional')}
                 </MenuItem>
               ))}
             </TextField>

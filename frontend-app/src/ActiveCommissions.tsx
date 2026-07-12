@@ -27,7 +27,7 @@ export default function ActiveCommissions() {
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto' }}>
-      <h2>Active Commissions</h2>
+      <h2>Active Promotionals</h2>
   {loading && <LoadingSpinner />}
   <GlobalSnackbar open={!!error} message={error || ''} severity="error" onClose={() => setError(null)} />
       <table border={1} cellPadding={6} style={{ marginTop: 20, width: '100%' }}>
@@ -36,7 +36,7 @@ export default function ActiveCommissions() {
             <th>Doctor</th>
             <th>Medical</th>
             <th>Product</th>
-            <th>Commission %</th>
+            <th>Promotional %</th>
             <th>Status</th>
           </tr>
         </thead>

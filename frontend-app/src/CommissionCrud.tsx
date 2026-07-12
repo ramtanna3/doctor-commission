@@ -79,7 +79,7 @@ export default function CommissionCrud() {
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/active`, { headers: { 'x-user-id': '1' } });
-      if (!res.ok) throw new Error('Failed to fetch commissions');
+      if (!res.ok) throw new Error('Failed to fetch promotionals');
       setCommissions(await res.json());
     } catch (e: any) {
       setError(e.message);
@@ -131,10 +131,10 @@ export default function CommissionCrud() {
         headers: { 'Content-Type': 'application/json', 'x-user-id': '1' },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error('Failed to save commission');
+      if (!res.ok) throw new Error('Failed to save promotional');
       setForm({ commissionPercentage: 0 });
       setEditingId(null);
-      setSuccess(editingId ? 'Commission updated successfully!' : 'Commission added successfully!');
+      setSuccess(editingId ? 'Promotional updated successfully!' : 'Promotional added successfully!');
       setShowSuccessDialog(true);
       fetchCommissions();
     } catch (e: any) {
@@ -160,10 +160,6 @@ export default function CommissionCrud() {
     setRowEditForm(prev => prev ? { ...prev, [name!]: value } : prev);
   };
 
-  const handleRowEditSelectChange = (name: string, value: any) => {
-    setRowEditForm(prev => prev ? { ...prev, [name]: value === '' ? undefined : Number(value) } : prev);
-  };
-
   const handleRowEditConfirm = async () => {
     if (!rowEditForm) return;
     setLoading(true);
@@ -181,8 +177,8 @@ export default function CommissionCrud() {
         headers: { 'Content-Type': 'application/json', 'x-user-id': '1' },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error('Failed to update commission');
-      setSuccess('Commission updated successfully!');
+      if (!res.ok) throw new Error('Failed to update promotional');
+      setSuccess('Promotional updated successfully!');
       setEditingRowId(null);
       setRowEditForm(null);
       fetchCommissions();
@@ -209,7 +205,7 @@ export default function CommissionCrud() {
     try {
       const res = await fetch(`${API_BASE}/${confirmDeleteId}`, { method: 'DELETE', headers: { 'x-user-id': '1' } });
       if (!res.ok) throw new Error('Failed to delete');
-      setSuccess('Commission deleted successfully!');
+      setSuccess('Promotional deleted successfully!');
       fetchCommissions();
     } catch (e: any) {
       setError(e.message);
@@ -232,8 +228,8 @@ export default function CommissionCrud() {
     <Box sx={{ flex: 1, width: '100%', minHeight: 'calc(100vh - 64px)', background: '#f5f5f5', p: { xs: 1, sm: 1 }, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
       <Card sx={{ width: '100%', maxWidth: 1100, m: '0 auto', mb: 3, boxShadow: 2, borderRadius: 3, background: '#f9fafb' }}>
         <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-          <Typography variant="h6" sx={{ fontWeight: 700, color: '#1976d2', mb: 2, pl: 1 }}>
-            Add Commission
+            <Typography variant="h6" sx={{ fontWeight: 700, color: '#1976d2', mb: 2, pl: 1 }}>
+            Add Promotional
           </Typography>
           <form onSubmit={handleSubmit} style={{ width: '100%' }}>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mb: 2 }}>
@@ -311,7 +307,7 @@ export default function CommissionCrud() {
               />
               <TextField
                 name="commissionPercentage"
-                label="Commission %"
+                label="Promotional %"
                 type="number"
                 value={form.commissionPercentage}
                 onChange={handleChange}
@@ -323,7 +319,7 @@ export default function CommissionCrud() {
             </Box>
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-start', mt: 0.5 }}>
               <Button type="submit" variant="contained" color="primary" disabled={loading} sx={{ minWidth: 140, height: 40, whiteSpace: 'nowrap', fontWeight: 600, fontSize: 16, px: 2, boxShadow: 1 }}>
-                {editingId ? 'Update' : 'Add'} Commission
+                {editingId ? 'Update' : 'Add'} Promotional
               </Button>
               {editingId && (
                 <Button
@@ -340,19 +336,19 @@ export default function CommissionCrud() {
           </form>
         </CardContent>
       </Card>
-      {/* Commissions Section: Filters + Table merged */}
+      {/* Promotionals Section: Filters + Table merged */}
       <Card sx={{ width: '100%', maxWidth: 1100, m: '0 auto', boxShadow: 1, borderRadius: 2, flex: 1, display: 'flex', flexDirection: 'column' }}>
         <CardContent sx={{ p: 0 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', px: 3, py: 2, borderBottom: '1px solid #eee', background: '#f7f7f7', borderTopLeftRadius: 8, borderTopRightRadius: 8, gap: 2, flexWrap: 'wrap' }}>
             <Typography variant="h6" sx={{ flex: 1, fontWeight: 700, color: '#222' }}>
-              Commissions
+              Promotionals
             </Typography>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#555', pr: 2 }}>
               Filters
             </Typography>
             <TextField
               type="text"
-              placeholder="Search commissions..."
+              placeholder="Search promotionals..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               size="small"
@@ -403,7 +399,7 @@ export default function CommissionCrud() {
                         onClick={() => handleSort('commissionPercentage')}
                         sx={{ whiteSpace: 'nowrap' }}
                       >
-                        Commission %
+                        Promotional %
                       </TableSortLabel>
                     </TableCell>
                     <TableCell sx={{ fontWeight: 700, width: '15%' }}>Actions</TableCell>

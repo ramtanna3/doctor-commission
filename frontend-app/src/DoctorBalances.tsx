@@ -159,7 +159,7 @@ export default function DoctorBalances() {
                 }
               }}
             >
-              Payout Commission
+              Payout Promotional
             </Button>
           </Box>
           <TableContainer component={Paper} sx={{ mt: 0, width: '100%', boxShadow: 0, borderRadius: 0 }}>

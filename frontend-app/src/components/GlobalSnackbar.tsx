@@ -1,6 +1,5 @@
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
-import React from 'react';
 
 export interface GlobalSnackbarProps {
   open: boolean;
