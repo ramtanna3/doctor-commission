@@ -1,0 +1,22 @@
+# Create systemd service file for React/Vite
+sudo tee /etc/systemd/system/doctor-commission-frontend.service > /dev/null << 'EOF'
+[Unit]
+Description=Doctor Commission Frontend (Vite)
+After=network.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/home/ec2-user/doctor-commission/frontend-app
+ExecStart=/usr/bin/npm run dev -- --host 0.0.0.0
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=doctor-commission-frontend
+Environment=NODE_ENV=production
+Environment=PATH=/usr/bin:/usr/local/bin
+
+[Install]
+WantedBy=multi-user.target
+EOF

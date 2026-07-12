@@ -1,0 +1,22 @@
+# Create systemd service file for Spring Boot
+sudo tee /etc/systemd/system/doctor-commission-backend.service > /dev/null << 'EOF'
+[Unit]
+Description=Doctor Commission Backend (Spring Boot)
+After=network.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/home/ec2-user/doctor-commission
+ExecStart=/usr/bin/java -jar -Dspring.profiles.active=aws dcas-0.0.1-SNAPSHOT.jar
+# Or if using Maven: ExecStart=/home/ec2-user/doctor-commission/mvnw spring-boot:run
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=doctor-commission-backend
+Environment=JAVA_HOME=/usr/lib/jvm/java-17-amazon-corretto
+
+[Install]
+WantedBy=multi-user.target
+EOF

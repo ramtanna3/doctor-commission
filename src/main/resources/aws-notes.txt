@@ -1,0 +1,45 @@
+AWS
+
+
+
+vishwa.raicha@gmail.com
+
+9819002243
+
+Account id = 393565238056
+
+
+RDS
+
+mysql-doctor-commission
+
+mysql-doctor-commission.cpaw6isoyapr.ap-south-1.rds.amazonaws.com
+
+admin
+root1234
+
+
+Git token - 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
+
+EC2 - 
+doctor-commission-ws
+
+Key
+doctor-commission-key
+
+
+EC2 connection - 
+Cd /Users/ramtanna/git_ramtanna3/doctor-commision-automation/dcas
+chmod 400 doctor-commission-key.pem
+ssh -i aws/doctor-commission-key.pem ec2-user@13.201.5.165
+
+
+scp -i aws/doctor-commission-key.pem target/dcas-0.0.1-SNAPSHOT.jar ec2-user@13.201.5.165:/home/ec2-user/doctor-commission/
+
+java -jar -Dspring.profiles.active=aws dcas-0.0.1-SNAPSHOT.jar
+
+
+tar --exclude='node_modules' -czf - frontend-app | ssh -i aws/doctor-commission-key.pem ec2-user@13.201.5.165:/home/ec2-user/doctor-commission/ "tar -xzf -"
+npm install
+npm run dev
+http://13.201.5.165:8080/
