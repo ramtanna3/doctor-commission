@@ -14,6 +14,8 @@ import com.org.app.dcas.repository.DistributorRepository;
 import com.org.app.dcas.repository.MedicalMasterRepository;
 import com.org.app.dcas.context.CompanyContext;
 import org.apache.poi.ss.usermodel.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,8 @@ import java.util.LinkedHashMap;
 
 @Service
 public class MasterDataUploadService {
+
+    private static final Logger log = LoggerFactory.getLogger(MasterDataUploadService.class);
 
     @Autowired
     private CompanyRepository companyRepository;
@@ -50,6 +54,7 @@ public class MasterDataUploadService {
 
     @Transactional
     public Map<String, Object> processMasterDataExcel(MultipartFile file) {
+        log.info("processMasterDataExcel - starting upload");
         Map<String, Object> response = new LinkedHashMap<>();
         try (InputStream is = file.getInputStream()) {
             Workbook workbook = WorkbookFactory.create(is);
@@ -244,7 +249,10 @@ public class MasterDataUploadService {
             response.put("medicalsInserted", totalMedicals);
             response.put("commissionsInserted", totalCommissions);
             response.put("status", "success");
+            log.info("processMasterDataExcel - done: companyId={}, distributorId={}, doctors={}, products={}, medicals={}, commissions={}",
+                    companyId, distributorId, totalDoctors, totalProducts, totalMedicals, totalCommissions);
         } catch (Exception e) {
+            log.error("processMasterDataExcel - error: {}", e.getMessage(), e);
             response.put("status", "error");
             response.put("errorMessage", e.getMessage());
         }

@@ -10,11 +10,15 @@ import com.org.app.dcas.repository.DistributorRepository;
 import com.org.app.dcas.repository.SalesTransactionRepository;
 import com.org.app.dcas.repository.CompanyRepository;
 import com.org.app.dcas.repository.NigoSalesTransactionRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
 public class CommissionCalculator {
+
+    private static final Logger log = LoggerFactory.getLogger(CommissionCalculator.class);
 
     private final CommissionMasterRepository commissionMasterRepository;
     private final MedicalMasterRepository medicalMasterRepository;
@@ -123,17 +127,21 @@ public class CommissionCalculator {
 
     public boolean rematchAndUpdateSalesTransaction(SalesTransaction tx, CommissionMaster matchedCommission) {
         if (tx == null || tx.getIsMatched() == null || tx.getIsMatched()) return false;
-        
+        log.info("rematchAndUpdateSalesTransaction - txId={}, rawMedical='{}', rawProduct='{}'",
+                tx.getSalesTransactionId(), tx.getRawMedicalName(), tx.getRawProductName());
         applyCommissionMapping(tx, matchedCommission, tx.getCompany());
         if (tx.getIsMatched()) {
             salesTransactionRepository.save(tx);
             doctorWalletService.syncDoctorWalletLedger(tx, tx.getCreatedBy());
+            log.info("rematchAndUpdateSalesTransaction - txId={} matched and saved", tx.getSalesTransactionId());
             return true;
         }
+        log.debug("rematchAndUpdateSalesTransaction - txId={} could not be matched", tx.getSalesTransactionId());
         return false;
     }
 
     public com.org.app.dcas.dto.RematchResult rematchAndUpdateSalesTransactions(List<Long> salesTransactionIds) {
+        log.info("rematchAndUpdateSalesTransactions - attempting to rematch {} transactions", salesTransactionIds.size());
         List<SalesTransaction> transactions = salesTransactionRepository.findAllById(salesTransactionIds);
         List<Long> successIds = new java.util.ArrayList<>();
         List<Long> failedIds = new java.util.ArrayList<>();
@@ -147,7 +155,7 @@ public class CommissionCalculator {
                 cm -> cm.getMedical().getName().trim().toLowerCase() + "_" + cm.getProduct().getName().trim().toLowerCase(),
                 cm -> cm
             ));
-
+        log.info("rematchAndUpdateSalesTransactions - commissionMap size={}", commissionMap.size());
 
         transactions.parallelStream()
             .filter(tx -> tx.getIsMatched() != null && !tx.getIsMatched())
@@ -165,6 +173,7 @@ public class CommissionCalculator {
                     failedIds.add(tx.getSalesTransactionId());
                 }
             });
+        log.info("rematchAndUpdateSalesTransactions - success={}, failed={}", successIds.size(), failedIds.size());
         return new com.org.app.dcas.dto.RematchResult(successIds, failedIds);
     }
 
@@ -221,6 +230,9 @@ public class CommissionCalculator {
     public void calculateAndPersistCommissionsWithMetrics(List<SalesExcelRow> salesRows, Long distributorId, FileAudit fileAudit, Metrics metrics) {
 
         Long companyId = companyContext.getCompanyId();
+        log.info("calculateAndPersistCommissions - distributorId={}, companyId={}, rowCount={}",
+                distributorId, companyId, salesRows.size());
+
         List<CommissionMaster> commissions = commissionMasterRepository.findByCompanyId(companyId);
         java.util.Map<String, CommissionMaster> commissionMap = commissions.stream()
             .filter(cm -> cm.getMedical() != null && cm.getProduct() != null
@@ -229,6 +241,7 @@ public class CommissionCalculator {
                 cm -> cm.getMedical().getName().trim().toLowerCase() + "_" + cm.getProduct().getName().trim().toLowerCase(),
                 cm -> cm
             ));
+        log.info("calculateAndPersistCommissions - commissionMap size={} for companyId={}", commissionMap.size(), companyId);
 
         Distributor distributor = distributorRepository.findById(distributorId)
                 .orElseThrow(() -> new IllegalArgumentException("Distributor not found for id: " + distributorId));
@@ -292,5 +305,7 @@ public class CommissionCalculator {
         metrics.nigoCount = nigoCount.get();
         metrics.unmatchedCount = unmatchedCount.get();
         metrics.errors = new java.util.ArrayList<>(errors);
+        log.info("calculateAndPersistCommissions - done: success={}, nigo={}, unmatched={}, errors={}",
+                metrics.successCount, metrics.nigoCount, metrics.unmatchedCount, metrics.errors.size());
     }
 }

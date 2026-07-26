@@ -6,6 +6,8 @@ import com.org.app.dcas.repository.*;
 import com.org.app.dcas.context.CompanyContext;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.usermodel.DateUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,6 +23,8 @@ import com.org.app.dcas.repository.FileAuditRepository;
 
 @Service
 public class CommissionService {
+
+    private static final Logger log = LoggerFactory.getLogger(CommissionService.class);
 
     private final CompanyRepository companyRepository;
     private final MedicalMasterRepository medicalRepository;
@@ -51,6 +55,7 @@ public class CommissionService {
 
     @Transactional
     public DoctorResponse createDoctorWithProducts(DoctorWithProductsRequest req) {
+        log.info("createDoctorWithProducts - name='{}', medicalId={}", req.getName(), req.getMedicalId());
         DoctorMaster d = new DoctorMaster();
         d.setName(req.getName());
         d.setSpecialization(req.getSpecialization());
@@ -65,12 +70,12 @@ public class CommissionService {
                 .orElseThrow(() -> new IllegalArgumentException("Invalid companyId"));
         d.setCompany(company);
 
-        // Set createdBy/updatedBy from context
         String userIdStr = companyContext.getUserId() != null ? companyContext.getUserId().toString() : "system";
         d.setCreatedBy(userIdStr);
         d.setUpdatedBy(userIdStr);
 
         DoctorMaster savedDoctor = doctorMasterRepository.save(d);
+        log.info("createDoctorWithProducts - created doctorId={}", savedDoctor.getDoctorId());
 
         final MedicalMaster medicalForCommission = (req.getMedicalId() != null)
                 ? medicalRepository.findById(req.getMedicalId()).orElse(null)
@@ -88,11 +93,10 @@ public class CommissionService {
                     c.setMedical(medicalForCommission);
                     c.setCompany(company);
                     c.setCommissionPercentage(pc.getCommissionPercentage() != null ? pc.getCommissionPercentage() : BigDecimal.ZERO);
-                    // Set createdBy/updatedBy for commission
                     c.setCreatedBy(userIdStr);
                     c.setUpdatedBy(userIdStr);
                     commissionRepository.save(c);
-
+                    log.info("createDoctorWithProducts - commission saved for productId={}", p.getProductId());
                     commissionResponses.add(new ProductCommissionResponse(p, c.getCommissionPercentage()));
                 });
             }
@@ -101,39 +105,44 @@ public class CommissionService {
         return new DoctorResponse(savedDoctor, medicalForCommission, commissionResponses);
     }
 
-    // CRUD methods for commission_master
-
     public List<CommissionMaster> getAllCommissionsForCurrentCompany() {
-        return commissionRepository.findByCompanyId(companyContext.getCompanyId());
+        Long companyId = companyContext.getCompanyId();
+        log.info("getAllCommissions - companyId={}", companyId);
+        List<CommissionMaster> result = commissionRepository.findByCompanyId(companyId);
+        log.info("getAllCommissions - returned {} commissions", result.size());
+        return result;
     }
 
     public List<CommissionResponse> getActiveCommissionsForCurrentCompany() {
-        List<CommissionMaster> masters = commissionRepository.findByCompanyIdAndIsActiveTrue(companyContext.getCompanyId());
+        Long companyId = companyContext.getCompanyId();
+        log.info("getActiveCommissions - companyId={}", companyId);
+        List<CommissionMaster> masters = commissionRepository.findByCompanyIdAndIsActiveTrue(companyId);
         List<CommissionResponse> responses = new ArrayList<>();
         for (CommissionMaster cm : masters) {
             responses.add(CommissionResponse.from(cm));
         }
+        log.info("getActiveCommissions - returned {} active commissions", responses.size());
         return responses;
     }
 
     public CommissionResponse getCommissionByIdForCurrentCompany(Long commissionId) {
+        log.info("getCommissionById - commissionId={}", commissionId);
         CommissionMaster cm = commissionRepository.findByCommissionIdAndCompanyId(commissionId, companyContext.getCompanyId()).orElse(null);
-        if (cm == null) return null;
+        if (cm == null) { log.warn("getCommissionById - commissionId={} not found", commissionId); return null; }
         return CommissionResponse.from(cm);
     }
 
     public CommissionMaster createCommissionForCurrentCompany(CommissionMaster commission) {
         Long companyId = companyContext.getCompanyId();
+        log.info("createCommission - companyId={}", companyId);
         Company company = companyRepository.findByCompanyId(companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid company id"));
         commission.setCompany(company);
 
-        // Set createdBy/updatedBy from context
         String userIdStr = companyContext.getUserId() != null ? companyContext.getUserId().toString() : "system";
         commission.setCreatedBy(userIdStr);
         commission.setUpdatedBy(userIdStr);
 
-        // Ensure doctor, product, medical are set from their respective masters
         if (commission.getDoctor() != null && commission.getDoctor().getDoctorId() != null) {
             DoctorMaster doctor = doctorMasterRepository.findById(commission.getDoctor().getDoctorId())
                     .orElseThrow(() -> new IllegalArgumentException("Invalid doctor id"));
@@ -150,12 +159,14 @@ public class CommissionService {
             commission.setMedical(medical);
         }
 
-        return commissionRepository.save(commission);
+        CommissionMaster saved = commissionRepository.save(commission);
+        log.info("createCommission - created commissionId={}", saved.getCommissionId());
+        return saved;
     }
 
     public CommissionMaster updateCommissionForCurrentCompany(Long commissionId, CommissionMaster commission) {
+        log.info("updateCommission - commissionId={}", commissionId);
         return commissionRepository.findByCommissionIdAndCompanyId(commissionId, companyContext.getCompanyId()).map(existing -> {
-            // Update only allowed fields
             if (commission.getDoctor() != null && commission.getDoctor().getDoctorId() != null) {
                 DoctorMaster doctor = doctorMasterRepository.findById(commission.getDoctor().getDoctorId())
                         .orElseThrow(() -> new IllegalArgumentException("Invalid doctor id"));
@@ -174,36 +185,41 @@ public class CommissionService {
             if (commission.getCommissionPercentage() != null) {
                 existing.setCommissionPercentage(commission.getCommissionPercentage());
             }
-            // Set updatedBy from context
             String userIdStr = companyContext.getUserId() != null ? companyContext.getUserId().toString() : "system";
             existing.setUpdatedBy(userIdStr);
-            return commissionRepository.save(existing);
-        }).orElse(null);
+            CommissionMaster saved = commissionRepository.save(existing);
+            log.info("updateCommission - commissionId={} updated", commissionId);
+            return saved;
+        }).orElseGet(() -> { log.warn("updateCommission - commissionId={} not found", commissionId); return null; });
     }
 
     public boolean softDeleteCommissionForCurrentCompany(Long commissionId) {
+        log.info("softDeleteCommission - commissionId={}", commissionId);
         return commissionRepository.findByCommissionIdAndCompanyId(commissionId, companyContext.getCompanyId()).map(existing -> {
             existing.setIsActive(false);
-            // Set updatedBy from context
             String userIdStr = companyContext.getUserId() != null ? companyContext.getUserId().toString() : "system";
             existing.setUpdatedBy(userIdStr);
             commissionRepository.save(existing);
+            log.info("softDeleteCommission - commissionId={} deactivated", commissionId);
             return true;
-        }).orElse(false);
+        }).orElseGet(() -> { log.warn("softDeleteCommission - commissionId={} not found", commissionId); return false; });
     }
 
 
     public FileAudit processSalesExcelWithMetrics(MultipartFile file, Long distributorId, Long userId, String fileName) {
+        log.info("processSalesExcel - fileName='{}', distributorId={}, userId={}", fileName, distributorId, userId);
         FileAudit fileAudit = new FileAudit();
         fileAudit.setFileName(fileName);
         fileAudit.setUploadedBy(userId);
         fileAudit.setUploadedAt(java.time.LocalDateTime.now());
-        // Save FileAudit before passing to commissionCalculator
         fileAudit = fileAuditRepository.save(fileAudit);
 
         processSalesExcelInternalWithMetrics(file, distributorId, fileAudit);
 
         fileAuditRepository.save(fileAudit);
+        log.info("processSalesExcel - done: fileName='{}', total={}, success={}, nigo={}, unmatched={}, errors={}",
+                fileName, fileAudit.getTotalRows(), fileAudit.getSuccessCount(),
+                fileAudit.getNigoCount(), fileAudit.getUnmatchedCount(), fileAudit.getErrorCount());
         return fileAudit;
     }
 
@@ -217,6 +233,7 @@ public class CommissionService {
         int nigoCount = 0;
         int unmatchedCount = 0;
         List<String> errors = new ArrayList<>();
+        log.info("processSalesExcelInternal - distributorId={}, fileAuditId={}", distributorId, fileAudit.getFileAuditId());
 
         try (InputStream is = file.getInputStream()) {
             Workbook workbook = WorkbookFactory.create(is);

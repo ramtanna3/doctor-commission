@@ -10,7 +10,8 @@ import com.org.app.dcas.model.SalesTransaction;
 import com.org.app.dcas.repository.DoctorMasterRepository;
 import com.org.app.dcas.repository.DistributorRepository;
 import com.org.app.dcas.repository.SalesTransactionRepository;
-import com.org.app.dcas.service.DoctorWalletService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -19,6 +20,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class SalesTransactionService {
+
+    private static final Logger log = LoggerFactory.getLogger(SalesTransactionService.class);
 
     private final SalesTransactionRepository salesTransactionRepository;
     private final DistributorRepository distributorRepository;
@@ -39,18 +42,28 @@ public class SalesTransactionService {
     }
 
     public List<SalesTransaction> getAllByDistributor(Long distributorId) {
-        return salesTransactionRepository.findByDistributorDistributorId(distributorId);
+        log.info("getAllByDistributor - distributorId={}", distributorId);
+        List<SalesTransaction> result = salesTransactionRepository.findByDistributorDistributorId(distributorId);
+        log.info("getAllByDistributor - distributorId={}, returned {} transactions", distributorId, result.size());
+        return result;
     }
 
     public List<SalesTransaction> getMatchedByDistributor(Long distributorId) {
-        return salesTransactionRepository.findByDistributorDistributorIdAndIsMatchedTrue(distributorId);
+        log.info("getMatchedByDistributor - distributorId={}", distributorId);
+        List<SalesTransaction> result = salesTransactionRepository.findByDistributorDistributorIdAndIsMatchedTrue(distributorId);
+        log.info("getMatchedByDistributor - distributorId={}, returned {} matched transactions", distributorId, result.size());
+        return result;
     }
 
     public List<SalesTransaction> getUnmatchedByDistributor(Long distributorId) {
-        return salesTransactionRepository.findByDistributorDistributorIdAndIsMatchedFalse(distributorId);
+        log.info("getUnmatchedByDistributor - distributorId={}", distributorId);
+        List<SalesTransaction> result = salesTransactionRepository.findByDistributorDistributorIdAndIsMatchedFalse(distributorId);
+        log.info("getUnmatchedByDistributor - distributorId={}, returned {} unmatched transactions", distributorId, result.size());
+        return result;
     }
 
     public SalesTransactionListResponse getSalesTransactionsByDistributor(Long distributorId, String matched) {
+        log.info("getSalesTransactionsByDistributor - distributorId={}, filter={}", distributorId, matched);
         List<SalesTransaction> txs;
         switch (matched.toUpperCase()) {
             case "ALL":
@@ -69,10 +82,12 @@ public class SalesTransactionService {
         List<SalesTransactionResponse> transactions = txs.stream()
             .map(SalesTransactionResponse::from)
             .collect(Collectors.toList());
+        log.info("getSalesTransactionsByDistributor - distributorId={}, returning {} transactions", distributorId, transactions.size());
         return new SalesTransactionListResponse(distributor, transactions);
     }
 
     public SalesTransactionDoctorAssignmentResult assignDoctorToSalesTransactions(List<Long> salesTransactionIds, Long doctorId) {
+        log.info("assignDoctorToSalesTransactions - doctorId={}, txCount={}", doctorId, salesTransactionIds.size());
         DoctorMaster doctor = doctorMasterRepository.findByDoctorIdAndCompanyId(doctorId, companyContext.getCompanyId())
                 .orElseThrow(() -> new IllegalArgumentException("Doctor not found for id: " + doctorId));
 
@@ -86,12 +101,14 @@ public class SalesTransactionService {
                 continue;
             }
             if (tx.getCompany() == null || !tx.getCompany().getCompanyId().equals(companyContext.getCompanyId())) {
+                log.warn("assignDoctorToSalesTransactions - txId={} company mismatch, skipping", tx.getSalesTransactionId());
                 failedIds.add(tx.getSalesTransactionId());
                 continue;
             }
             boolean isCurrentlyMatched = Boolean.TRUE.equals(tx.getIsMatched());
             boolean hasDoctor = tx.getDoctor() != null;
             if (isCurrentlyMatched && hasDoctor) {
+                log.warn("assignDoctorToSalesTransactions - txId={} already matched to a doctor, skipping", tx.getSalesTransactionId());
                 failedIds.add(tx.getSalesTransactionId());
                 continue;
             }
@@ -114,6 +131,7 @@ public class SalesTransactionService {
                     BigDecimal amount = new BigDecimal(tx.getAmount());
                     BigDecimal commissionAmount = amount.multiply(tx.getCommissionPercent()).divide(new BigDecimal("100"));
                     tx.setCommissionAmount(commissionAmount);
+                    log.debug("assignDoctorToSalesTransactions - txId={} commissionAmount computed={}", tx.getSalesTransactionId(), commissionAmount);
                 } catch (Exception ignored) {
                 }
             }
@@ -124,6 +142,7 @@ public class SalesTransactionService {
             assignedIds.add(tx.getSalesTransactionId());
         }
 
+        log.info("assignDoctorToSalesTransactions - doctorId={}, assigned={}, failed={}", doctorId, assignedIds.size(), failedIds.size());
         return new SalesTransactionDoctorAssignmentResult(assignedIds, failedIds);
     }
 }
