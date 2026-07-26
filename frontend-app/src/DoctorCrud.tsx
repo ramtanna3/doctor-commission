@@ -15,6 +15,12 @@ import LoadingSpinner from './components/LoadingSpinner';
 import GlobalSnackbar from './components/GlobalSnackbar';
 import SuccessDialog from './components/SuccessDialog';
 import Box from '@mui/material/Box';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Pagination from '@mui/material/Pagination';
+import Stack from '@mui/material/Stack';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -49,6 +55,8 @@ export default function DoctorCrud() {
   const [sortBy, setSortBy] = useState<'name' | 'specialization' | 'phoneNumber' | 'email'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const fetchDoctors = async () => {
     setLoading(true);
@@ -204,6 +212,40 @@ export default function DoctorCrud() {
     }
   };
 
+  const filteredDoctors = doctors.filter(d => {
+    const s = search.toLowerCase();
+    return (
+      (d.name || '').toLowerCase().includes(s) ||
+      (d.specialization || '').toLowerCase().includes(s) ||
+      (d.phoneNumber || '').toLowerCase().includes(s) ||
+      (d.email || '').toLowerCase().includes(s)
+    );
+  });
+
+  const sortedDoctors = [...filteredDoctors].sort((a, b) => {
+    const aVal = (a[sortBy] || '').toLowerCase();
+    const bVal = (b[sortBy] || '').toLowerCase();
+    if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const totalDoctors = sortedDoctors.length;
+  const pageCount = Math.max(1, Math.ceil(totalDoctors / rowsPerPage));
+  const pageStart = (page - 1) * rowsPerPage;
+  const pageEnd = Math.min(pageStart + rowsPerPage, totalDoctors);
+  const visibleDoctors = sortedDoctors.slice(pageStart, pageEnd);
+
+  useEffect(() => {
+    if (page > pageCount) {
+      setPage(pageCount);
+    }
+  }, [page, pageCount]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, rowsPerPage]);
+
   return (
     <Box sx={{ flex: 1, width: '100%', minHeight: 'calc(100vh - 64px)', background: '#f5f5f5', p: { xs: 1, sm: 1 }, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
       {/* Page Header */}
@@ -358,24 +400,7 @@ export default function DoctorCrud() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {doctors
-                    .filter(d => {
-                      const s = search.toLowerCase();
-                      return (
-                        (d.name || '').toLowerCase().includes(s) ||
-                        (d.specialization || '').toLowerCase().includes(s) ||
-                        (d.phoneNumber || '').toLowerCase().includes(s) ||
-                        (d.email || '').toLowerCase().includes(s)
-                      );
-                    })
-                    .sort((a, b) => {
-                      const aVal = (a[sortBy] || '').toLowerCase();
-                      const bVal = (b[sortBy] || '').toLowerCase();
-                      if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
-                      if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
-                      return 0;
-                    })
-                  .map((d, idx) => (
+                  {visibleDoctors.length > 0 ? visibleDoctors.map((d, idx) => (
                     <TableRow key={d.doctorId} sx={{ background: idx % 2 === 0 ? '#fff' : '#f9fafb' }}>
                       {editingRowId === d.doctorId ? (
                         <>
@@ -409,10 +434,45 @@ export default function DoctorCrud() {
                         </>
                       )}
                     </TableRow>
-                  ))}
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4, color: '#666' }}>
+                        No doctors match your search.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
+            <Box sx={{ mt: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', justifyContent: 'space-between', gap: 2, px: 1 }}>
+              <Typography variant="body2" sx={{ color: '#555' }}>
+                Showing {totalDoctors === 0 ? 0 : pageStart + 1} - {pageEnd} of {totalDoctors} doctors
+              </Typography>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" sx={{ width: { xs: '100%', sm: 'auto' } }}>
+                <FormControl size="small" sx={{ minWidth: 130, background: '#fff', borderRadius: 1 }}>
+                  <InputLabel id="rows-per-page-label">Page size</InputLabel>
+                  <Select
+                    labelId="rows-per-page-label"
+                    value={rowsPerPage}
+                    label="Page size"
+                    onChange={e => setRowsPerPage(Number(e.target.value))}
+                  >
+                    {[10, 20, 30].map(size => (
+                      <MenuItem key={size} value={size}>{size}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Pagination
+                  count={pageCount}
+                  page={page}
+                  onChange={(_, value) => setPage(value)}
+                  color="primary"
+                  showFirstButton
+                  showLastButton
+                  shape="rounded"
+                />
+              </Stack>
+            </Box>
           </Box>
         </CardContent>
       </Card>

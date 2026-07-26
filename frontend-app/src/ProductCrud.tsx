@@ -22,6 +22,12 @@ import LoadingSpinner from './components/LoadingSpinner';
 import GlobalSnackbar from './components/GlobalSnackbar';
 import SuccessDialog from './components/SuccessDialog';
 import ConfirmDialog from './components/ConfirmDialog';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Pagination from '@mui/material/Pagination';
+import Stack from '@mui/material/Stack';
 
 export type Product = {
   productId?: number;
@@ -48,6 +54,8 @@ export default function ProductCrud() {
   const [sortBy, setSortBy] = useState<'name' | 'description'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -158,6 +166,37 @@ export default function ProductCrud() {
       setSortOrder('asc');
     }
   };
+
+  const filteredProducts = products.filter(p => {
+    const s = search.toLowerCase();
+    return (
+      (p.name || '').toLowerCase().includes(s) ||
+      (p.description || '').toLowerCase().includes(s) ||
+      (p.defaultCommissionPercentage !== undefined && String(p.defaultCommissionPercentage).includes(s))
+    );
+  });
+
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    const aVal = (a[sortBy] || '').toLowerCase();
+    const bVal = (b[sortBy] || '').toLowerCase();
+    if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const totalProducts = sortedProducts.length;
+  const pageCount = Math.max(1, Math.ceil(totalProducts / rowsPerPage));
+  const pageStart = (page - 1) * rowsPerPage;
+  const pageEnd = Math.min(pageStart + rowsPerPage, totalProducts);
+  const visibleProducts = sortedProducts.slice(pageStart, pageEnd);
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, rowsPerPage]);
 
   return (
     <Box sx={{ flex: 1, width: '100%', minHeight: 'calc(100vh - 64px)', background: '#f5f5f5', p: { xs: 1, sm: 1 }, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
@@ -288,23 +327,7 @@ export default function ProductCrud() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {products
-                    .filter(p => {
-                      const s = search.toLowerCase();
-                      return (
-                        (p.name || '').toLowerCase().includes(s) ||
-                        (p.description || '').toLowerCase().includes(s) ||
-                        (p.defaultCommissionPercentage !== undefined && String(p.defaultCommissionPercentage).includes(s))
-                      );
-                    })
-                    .sort((a, b) => {
-                      const aVal = (a[sortBy] || '').toLowerCase();
-                      const bVal = (b[sortBy] || '').toLowerCase();
-                      if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
-                      if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
-                      return 0;
-                    })
-                  .map((p, idx) => (
+                  {visibleProducts.length > 0 ? visibleProducts.map((p, idx) => (
                     <TableRow key={p.productId} sx={{ background: idx % 2 === 0 ? '#fff' : '#f9fafb' }}>
                       {editingRowId === p.productId ? (
                         <>
@@ -347,10 +370,45 @@ export default function ProductCrud() {
                         </>
                       )}
                     </TableRow>
-                  ))}
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={4} sx={{ textAlign: 'center', py: 4, color: '#666' }}>
+                        No products match your search.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
+            <Box sx={{ mt: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', justifyContent: 'space-between', gap: 2, px: 1 }}>
+              <Typography variant="body2" sx={{ color: '#555' }}>
+                Showing {totalProducts === 0 ? 0 : pageStart + 1} - {pageEnd} of {totalProducts} products
+              </Typography>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" sx={{ width: { xs: '100%', sm: 'auto' } }}>
+                <FormControl size="small" sx={{ minWidth: 130, background: '#fff', borderRadius: 1 }}>
+                  <InputLabel id="rows-per-page-label-product">Page size</InputLabel>
+                  <Select
+                    labelId="rows-per-page-label-product"
+                    value={rowsPerPage}
+                    label="Page size"
+                    onChange={e => setRowsPerPage(Number(e.target.value))}
+                  >
+                    {[10, 20, 30].map(size => (
+                      <MenuItem key={size} value={size}>{size}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Pagination
+                  count={pageCount}
+                  page={page}
+                  onChange={(_, value) => setPage(value)}
+                  color="primary"
+                  showFirstButton
+                  showLastButton
+                  shape="rounded"
+                />
+              </Stack>
+            </Box>
           </Box>
         </CardContent>
       </Card>

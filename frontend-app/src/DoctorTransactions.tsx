@@ -18,6 +18,11 @@ import Chip from '@mui/material/Chip';
 import MenuItem from '@mui/material/MenuItem';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import TextField from '@mui/material/TextField';
+import Select from '@mui/material/Select';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Pagination from '@mui/material/Pagination';
+import Stack from '@mui/material/Stack';
 
 export default function DoctorTransactions() {
   const [doctors, setDoctors] = useState<any[]>([]);
@@ -40,6 +45,8 @@ export default function DoctorTransactions() {
   const [selectedReferenceTypes, setSelectedReferenceTypes] = useState<string[]>(REFERENCE_TYPE_OPTIONS);
   const [sortBy, setSortBy] = useState<string>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const handleSort = (column: string) => {
     if (sortBy === column) {
       setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
@@ -106,6 +113,57 @@ export default function DoctorTransactions() {
       setLoading(false);
     }
   };
+
+  const filteredTxns = transactions.filter((t: any) => {
+    if (!selectedReferenceTypes.includes(t.referenceType)) return false;
+    const dateStr = t.transactionDate || '';
+    if (dateFrom && dateStr && dateStr < dateFrom) return false;
+    if (dateTo && dateStr && dateStr > dateTo) return false;
+    if (!search) return true;
+    const text = [
+      dateStr,
+      t.referenceType,
+      t.creditAmount,
+      t.debitAmount,
+      t.remarks
+    ]
+      .join(' ')
+      .toLowerCase();
+    return text.includes(search.toLowerCase());
+  });
+
+  const sortedTxns = [...filteredTxns].sort((a: any, b: any) => {
+    let aVal = a[sortBy];
+    let bVal = b[sortBy];
+    if (sortBy === 'referenceType') {
+      aVal = a.referenceType || '';
+      bVal = b.referenceType || '';
+    } else if (sortBy === 'date') {
+      aVal = a.transactionDate || '';
+      bVal = b.transactionDate || '';
+    }
+    if (aVal == null) aVal = '';
+    if (bVal == null) bVal = '';
+    if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+    if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+    if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const totalTxns = sortedTxns.length;
+  const txPageCount = Math.max(1, Math.ceil(totalTxns / rowsPerPage));
+  const txPageStart = (page - 1) * rowsPerPage;
+  const txPageEnd = Math.min(txPageStart + rowsPerPage, totalTxns);
+  const visibleTxns = sortedTxns.slice(txPageStart, txPageEnd);
+
+  useEffect(() => {
+    if (page > txPageCount) setPage(txPageCount);
+  }, [page, txPageCount]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, selectedReferenceTypes, dateFrom, dateTo, rowsPerPage, selectedDoctor]);
 
   return (
     <Box sx={{ flex: 1, width: '100%', minHeight: 'calc(100vh - 64px)', background: '#f5f5f5', p: { xs: 1, sm: 1 }, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', position: 'relative' }}>
@@ -313,46 +371,7 @@ export default function DoctorTransactions() {
                   </TableRow>
                 </TableHead>
               <TableBody>
-                {transactions
-                  .filter((t: any) => {
-                    // Reference type filter
-                    if (!selectedReferenceTypes.includes(t.referenceType)) return false;
-                    // Date range filter
-                    const dateStr = t.transactionDate || '';
-                    if (dateFrom && dateStr && dateStr < dateFrom) return false;
-                    if (dateTo && dateStr && dateStr > dateTo) return false;
-                    // Free text search
-                    if (!search) return true;
-                    const text = [
-                      dateStr,
-                      t.referenceType,
-                      t.creditAmount,
-                      t.debitAmount,
-                      t.remarks
-                    ]
-                      .join(' ')
-                      .toLowerCase();
-                    return text.includes(search.toLowerCase());
-                  })
-                  .sort((a: any, b: any) => {
-                    let aVal = a[sortBy];
-                    let bVal = b[sortBy];
-                    if (sortBy === 'referenceType') {
-                      aVal = a.referenceType || '';
-                      bVal = b.referenceType || '';
-                    } else if (sortBy === 'date') {
-                      aVal = a.transactionDate || '';
-                      bVal = b.transactionDate || '';
-                    }
-                    if (aVal == null) aVal = '';
-                    if (bVal == null) bVal = '';
-                    if (typeof aVal === 'string') aVal = aVal.toLowerCase();
-                    if (typeof bVal === 'string') bVal = bVal.toLowerCase();
-                    if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
-                    if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
-                    return 0;
-                  })
-                  .map((t: any, idx: number) => (
+                {visibleTxns.map((t: any, idx: number) => (
                     <TableRow key={t.doctorWalletLedgerId || t.id || idx} sx={{ background: idx % 2 === 0 ? '#fff' : '#f9fafb' }}>
                       <TableCell>{t.transactionDate || ''}</TableCell>
                       <TableCell>{t.referenceType || ''}</TableCell>
@@ -365,6 +384,35 @@ export default function DoctorTransactions() {
               </TableBody>
             </Table>
           </TableContainer>
+          <Box sx={{ mt: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', justifyContent: 'space-between', gap: 2, px: 1 }}>
+            <Typography variant="body2" sx={{ color: '#555' }}>
+              Showing {totalTxns === 0 ? 0 : txPageStart + 1} - {txPageEnd} of {totalTxns} transactions
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" sx={{ width: { xs: '100%', sm: 'auto' } }}>
+              <FormControl size="small" sx={{ minWidth: 130, background: '#fff', borderRadius: 1 }}>
+                <InputLabel id="rows-per-page-label-txn">Page size</InputLabel>
+                <Select
+                  labelId="rows-per-page-label-txn"
+                  value={rowsPerPage}
+                  label="Page size"
+                  onChange={e => setRowsPerPage(Number(e.target.value))}
+                >
+                  {[10, 20, 30].map(size => (
+                    <MenuItem key={size} value={size}>{size}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Pagination
+                count={txPageCount}
+                page={page}
+                onChange={(_, value) => setPage(value)}
+                color="primary"
+                showFirstButton
+                showLastButton
+                shape="rounded"
+              />
+            </Stack>
+          </Box>
           {selectedDoctor && transactions.length === 0 && !loading && <Typography sx={{ p: 2 }}>No transactions found for this doctor.</Typography>}
         </Box>
         </CardContent>

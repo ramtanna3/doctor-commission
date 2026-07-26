@@ -1,7 +1,10 @@
 package com.org.app.dcas.controller;
 
+import com.org.app.dcas.dto.SalesTransactionDoctorAssignmentRequest;
+import com.org.app.dcas.dto.SalesTransactionDoctorAssignmentResult;
 import com.org.app.dcas.dto.SalesTransactionListResponse;
 import com.org.app.dcas.service.SalesTransactionService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -20,5 +23,14 @@ public class SalesTransactionController {
             @PathVariable String matched
     ) {
         return salesTransactionService.getSalesTransactionsByDistributor(distributorId, matched);
+    }
+
+    @PutMapping("/assign-doctor")
+    public ResponseEntity<SalesTransactionDoctorAssignmentResult> assignDoctorToSalesTransactions(
+            @RequestBody SalesTransactionDoctorAssignmentRequest request
+    ) {
+        SalesTransactionDoctorAssignmentResult result = salesTransactionService.assignDoctorToSalesTransactions(
+                request.getSalesTransactionIds(), request.getDoctorId());
+        return ResponseEntity.ok(result);
     }
 }

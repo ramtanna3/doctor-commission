@@ -22,6 +22,12 @@ import LoadingSpinner from './components/LoadingSpinner';
 import GlobalSnackbar from './components/GlobalSnackbar';
 import SuccessDialog from './components/SuccessDialog';
 import ConfirmDialog from './components/ConfirmDialog';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Pagination from '@mui/material/Pagination';
+import Stack from '@mui/material/Stack';
 
 export type Medical = {
   medicalId?: number;
@@ -126,6 +132,8 @@ export default function MedicalCrud() {
   const [sortBy, setSortBy] = useState<'name' | 'address' | 'phoneNumber' | 'email'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const fetchMedicals = async () => {
     setLoading(true);
@@ -203,6 +211,38 @@ export default function MedicalCrud() {
     }
   };
 
+
+  const filteredMedicals = medicals.filter(m => {
+    const s = search.toLowerCase();
+    return (
+      (m.name || '').toLowerCase().includes(s) ||
+      (m.address || '').toLowerCase().includes(s) ||
+      (m.phoneNumber || '').toLowerCase().includes(s) ||
+      (m.email || '').toLowerCase().includes(s)
+    );
+  });
+
+  const sortedMedicals = [...filteredMedicals].sort((a, b) => {
+    const aVal = (a[sortBy] || '').toLowerCase();
+    const bVal = (b[sortBy] || '').toLowerCase();
+    if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const totalMedicals = sortedMedicals.length;
+  const pageCount = Math.max(1, Math.ceil(totalMedicals / rowsPerPage));
+  const pageStart = (page - 1) * rowsPerPage;
+  const pageEnd = Math.min(pageStart + rowsPerPage, totalMedicals);
+  const visibleMedicals = sortedMedicals.slice(pageStart, pageEnd);
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, rowsPerPage]);
 
   // --- Modernized UI/UX and features ---
   return (
@@ -356,24 +396,7 @@ export default function MedicalCrud() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {medicals
-                    .filter(m => {
-                      const s = search.toLowerCase();
-                      return (
-                        (m.name || '').toLowerCase().includes(s) ||
-                        (m.address || '').toLowerCase().includes(s) ||
-                        (m.phoneNumber || '').toLowerCase().includes(s) ||
-                        (m.email || '').toLowerCase().includes(s)
-                      );
-                    })
-                    .sort((a, b) => {
-                      const aVal = (a[sortBy] || '').toLowerCase();
-                      const bVal = (b[sortBy] || '').toLowerCase();
-                      if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
-                      if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
-                      return 0;
-                    })
-                  .map((m, idx) => (
+                  {visibleMedicals.length > 0 ? visibleMedicals.map((m, idx) => (
                     <TableRow key={m.medicalId} sx={{ background: idx % 2 === 0 ? '#fff' : '#f9fafb' }}>
                       {editingRowId === m.medicalId ? (
                         <>
@@ -407,10 +430,45 @@ export default function MedicalCrud() {
                         </>
                       )}
                     </TableRow>
-                  ))}
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4, color: '#666' }}>
+                        No medicals match your search.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
+            <Box sx={{ mt: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', justifyContent: 'space-between', gap: 2, px: 1 }}>
+              <Typography variant="body2" sx={{ color: '#555' }}>
+                Showing {totalMedicals === 0 ? 0 : pageStart + 1} - {pageEnd} of {totalMedicals} medicals
+              </Typography>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" sx={{ width: { xs: '100%', sm: 'auto' } }}>
+                <FormControl size="small" sx={{ minWidth: 130, background: '#fff', borderRadius: 1 }}>
+                  <InputLabel id="rows-per-page-label-medical">Page size</InputLabel>
+                  <Select
+                    labelId="rows-per-page-label-medical"
+                    value={rowsPerPage}
+                    label="Page size"
+                    onChange={e => setRowsPerPage(Number(e.target.value))}
+                  >
+                    {[10, 20, 30].map(size => (
+                      <MenuItem key={size} value={size}>{size}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Pagination
+                  count={pageCount}
+                  page={page}
+                  onChange={(_, value) => setPage(value)}
+                  color="primary"
+                  showFirstButton
+                  showLastButton
+                  shape="rounded"
+                />
+              </Stack>
+            </Box>
           </Box>
         </CardContent>
       </Card>

@@ -18,12 +18,18 @@ import Box from '@mui/material/Box';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import ConfirmDialog from './components/ConfirmDialog';
 
+import Checkbox from '@mui/material/Checkbox';
+import Button from '@mui/material/Button';
 import Autocomplete from '@mui/material/Autocomplete';
 import MenuItem from '@mui/material/MenuItem';
 import Chip from '@mui/material/Chip';
 import { buildVisibleTransactionsForExport, exportTransactionsToExcel, exportTransactionsToPdf } from './utils/exportData';
 
-// import Stack from '@mui/material/Stack';
+import Select from '@mui/material/Select';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Stack from '@mui/material/Stack';
+import Pagination from '@mui/material/Pagination';
 
 export default function SalesTransactions() {
   const [distributors, setDistributors] = useState<any[]>([]);
@@ -45,11 +51,16 @@ export default function SalesTransactions() {
   const [dateTo, setDateTo] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  // No row editing state needed
+  const [doctors, setDoctors] = useState<any[]>([]);
+  const [selectedTransactionIds, setSelectedTransactionIds] = useState<number[]>([]);
+  const [bulkDoctor, setBulkDoctor] = useState<any>(null);
   const [confirmDialogId, setConfirmDialogId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   useEffect(() => {
     fetchDistributors();
+    fetchDoctors();
   }, []);
 
   useEffect(() => {
@@ -67,16 +78,76 @@ export default function SalesTransactions() {
     setLoading(true);
     setError(null);
     try {
-  const res = await fetch(`/api/sales-transactions/by-distributor/${distributorId}/all`, { headers: { 'x-user-id': '1' } });
+      const res = await fetch(`/api/sales-transactions/by-distributor/${distributorId}/all`, { headers: { 'x-user-id': '1' } });
       if (!res.ok) throw new Error('Failed to fetch sales transactions');
       const data = await res.json();
       setTransactions(data.transactions || []);
       setDistributorName(data.distributor?.distributorName || '');
+      setSelectedTransactionIds([]);
     } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchDoctors = async () => {
+    try {
+      const res = await fetch('/api/doctors/active', { headers: { 'x-user-id': '1' } });
+      if (!res.ok) throw new Error('Failed to fetch doctors');
+      const data = await res.json();
+      setDoctors(data || []);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  const getDoctorId = (doctor: any) => doctor?.doctorId ?? doctor?.id ?? null;
+
+  const assignDoctor = async (salesTransactionIds: number[], doctor: any) => {
+    if (!doctor || !salesTransactionIds.length) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/sales-transactions/assign-doctor', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': '1'
+        },
+        body: JSON.stringify({
+          salesTransactionIds,
+          doctorId: getDoctorId(doctor)
+        })
+      });
+      if (!res.ok) {
+        const errorBody = await res.text();
+        throw new Error(errorBody || 'Failed to assign doctor');
+      }
+      const result = await res.json();
+      setSuccess(`Assigned ${result.assignedSalesTransactionIds?.length || 0} transaction(s) to ${doctor.name || 'doctor'}`);
+      setShowSuccessDialog(true);
+      setSelectedTransactionIds(prev => prev.filter(id => !salesTransactionIds.includes(id)));
+      fetchTransactions(selectedDistributor);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAssignDoctorToSelected = async () => {
+    await assignDoctor(selectedTransactionIds, bulkDoctor);
+    setBulkDoctor(null);
+  };
+
+  const handleTransactionCheckboxChange = (transactionId: number, checked: boolean) => {
+    setSelectedTransactionIds(prev => {
+      if (checked) {
+        return [...prev, transactionId];
+      }
+      return prev.filter(id => id !== transactionId);
+    });
   };
 
   const visibleTransactions = useMemo(() => buildVisibleTransactionsForExport(transactions, {
@@ -85,6 +156,28 @@ export default function SalesTransactions() {
     dateFrom,
     dateTo,
   }), [transactions, search, statusFilter, dateFrom, dateTo]);
+
+  const visibleUnmatchedTransactions = useMemo(
+    () => visibleTransactions.filter((t: any) => t.isMatched === false),
+    [visibleTransactions]
+  );
+
+  const visibleUnmatchedTransactionIds = useMemo(
+    () => visibleUnmatchedTransactions.map((t: any) => t.salesTransactionId),
+    [visibleUnmatchedTransactions]
+  );
+
+  const isAllVisibleSelected =
+    visibleUnmatchedTransactionIds.length > 0 &&
+    visibleUnmatchedTransactionIds.every(id => selectedTransactionIds.includes(id));
+
+  const isSomeVisibleSelected =
+    selectedTransactionIds.length > 0 &&
+    visibleUnmatchedTransactionIds.some(id => selectedTransactionIds.includes(id));
+
+  const handleSelectAll = (checked: boolean) => {
+    setSelectedTransactionIds(checked ? visibleUnmatchedTransactionIds : []);
+  };
 
   const sortedTransactions = useMemo(() => {
     return [...visibleTransactions].sort((a: any, b: any) => {
@@ -112,6 +205,20 @@ export default function SalesTransactions() {
       return 0;
     });
   }, [visibleTransactions, sortBy, sortOrder]);
+
+  const totalTransactions = sortedTransactions.length;
+  const pageCount = Math.max(1, Math.ceil(totalTransactions / rowsPerPage));
+  const pageStart = (page - 1) * rowsPerPage;
+  const pageEnd = Math.min(pageStart + rowsPerPage, totalTransactions);
+  const pagedTransactions = sortedTransactions.slice(pageStart, pageEnd);
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter, dateFrom, dateTo, rowsPerPage, selectedDistributor]);
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -289,6 +396,28 @@ export default function SalesTransactions() {
                   </IconButton>
                 </Box>
               </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', mt: 1, px: 1 }}>
+                <Autocomplete
+                  options={doctors}
+                  getOptionLabel={(d: any) => d?.name || d?.doctorName || ''}
+                  value={bulkDoctor}
+                  onChange={(_e: any, newValue: any) => setBulkDoctor(newValue)}
+                  isOptionEqualToValue={(option: any, value: any) => (option.doctorId || option.id) === (value?.doctorId || value?.id)}
+                  renderInput={(params: any) => (
+                    <TextField {...params} label="Doctor for selected" size="small" sx={{ minWidth: 220, background: '#fff', borderRadius: 1 }} />
+                  )}
+                  sx={{ minWidth: 220, maxWidth: 320, background: '#fff', borderRadius: 1 }}
+                />
+                <Button
+                  variant="contained"
+                  color="primary"
+                  disabled={!bulkDoctor || selectedTransactionIds.length === 0 || loading}
+                  onClick={handleAssignDoctorToSelected}
+                  sx={{ height: 36 }}
+                >
+                  Assign to selected ({selectedTransactionIds.length})
+                </Button>
+              </Box>
             </Box>
             <GlobalSnackbar open={!!error} message={error || ''} severity="error" onClose={() => setError(null)} />
             <SuccessDialog open={showSuccessDialog} message={success || ''} onClose={() => setShowSuccessDialog(false)} />
@@ -313,6 +442,15 @@ export default function SalesTransactions() {
                 <Table size="small" sx={{ minWidth: 900 }}>
                   <TableHead sx={{ position: 'sticky', top: 0, background: '#f7f7f7', zIndex: 1 }}>
                   <TableRow>
+                    <TableCell sx={{ fontWeight: 700, width: '4%', color: '#222', background: '#f7f7f7', fontSize: 15 }}>
+                      <Checkbox
+                        size="small"
+                        indeterminate={isSomeVisibleSelected && !isAllVisibleSelected}
+                        checked={isAllVisibleSelected}
+                        disabled={visibleUnmatchedTransactionIds.length === 0}
+                        onChange={e => handleSelectAll(e.target.checked)}
+                      />
+                    </TableCell>
                     <TableCell sx={{ fontWeight: 700, width: '10%', color: '#222', background: '#f7f7f7', fontSize: 15 }}>
                       <TableSortLabel
                         active={sortBy === 'date'}
@@ -410,11 +548,19 @@ export default function SalesTransactions() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {sortedTransactions.map((t: any, idx: number) => (
+                {pagedTransactions.map((t: any, idx: number) => (
                     <TableRow key={t.salesTransactionId || t.transactionId || t.id} sx={{ background: idx % 2 === 0 ? '#fff' : '#f9fafb' }}>
+                      <TableCell sx={{ width: '4%' }}>
+                        <Checkbox
+                          size="small"
+                          checked={selectedTransactionIds.includes(t.salesTransactionId)}
+                          disabled={t.isMatched !== false}
+                          onChange={e => handleTransactionCheckboxChange(t.salesTransactionId, e.target.checked)}
+                        />
+                      </TableCell>
                       <TableCell sx={{ width: '10%' }}>{t.date || t.transactionDate || ''}</TableCell>
                       <TableCell sx={{ width: '10%' }}>{t.voucherNo || ''}</TableCell>
-                      <TableCell sx={{ width: '12%' }}>{t.doctor?.name || ''}</TableCell>
+                      <TableCell sx={{ width: '20%' }}>{t.doctor?.name || ''}</TableCell>
                       <TableCell sx={{ width: '12%' }}>{t.medical?.name || ''}</TableCell>
                       <TableCell sx={{ width: '12%' }}>{t.product?.name || ''}</TableCell>
                       <TableCell sx={{ width: '8%' }}>{t.qty || t.quantity}</TableCell>
@@ -427,6 +573,35 @@ export default function SalesTransactions() {
               </TableBody>
             </Table>
           </TableContainer>
+          <Box sx={{ mt: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', justifyContent: 'space-between', gap: 2, px: 1 }}>
+            <Typography variant="body2" sx={{ color: '#555' }}>
+              Showing {totalTransactions === 0 ? 0 : pageStart + 1} - {pageEnd} of {totalTransactions} transactions
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" sx={{ width: { xs: '100%', sm: 'auto' } }}>
+              <FormControl size="small" sx={{ minWidth: 130, background: '#fff', borderRadius: 1 }}>
+                <InputLabel id="rows-per-page-label-sales">Page size</InputLabel>
+                <Select
+                  labelId="rows-per-page-label-sales"
+                  value={rowsPerPage}
+                  label="Page size"
+                  onChange={e => setRowsPerPage(Number(e.target.value))}
+                >
+                  {[10, 20, 30].map(size => (
+                    <MenuItem key={size} value={size}>{size}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Pagination
+                count={pageCount}
+                page={page}
+                onChange={(_, value) => setPage(value)}
+                color="primary"
+                showFirstButton
+                showLastButton
+                shape="rounded"
+              />
+            </Stack>
+          </Box>
         </Box> {/* Close Box with position: 'relative' */}
       </CardContent>
       </Card>

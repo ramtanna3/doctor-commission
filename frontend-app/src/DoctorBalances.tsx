@@ -16,6 +16,12 @@ import LoadingSpinner from './components/LoadingSpinner';
 import GlobalSnackbar from './components/GlobalSnackbar';
 import Box from '@mui/material/Box';
 import TableSortLabel from '@mui/material/TableSortLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Pagination from '@mui/material/Pagination';
+import Stack from '@mui/material/Stack';
 
 export default function DoctorBalances() {
   const [balances, setBalances] = useState<any[]>([]);
@@ -26,6 +32,8 @@ export default function DoctorBalances() {
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [selected, setSelected] = useState<string[]>([]); // doctorId or id
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   // Helper to get doctor id
   const getDoctorId = (b: any) => b.doctor?.doctorId || b.doctor?.id;
 
@@ -107,6 +115,21 @@ export default function DoctorBalances() {
       setSortOrder('asc');
     }
   };
+
+  const totalBalances = sorted.length;
+  const pageCount = Math.max(1, Math.ceil(totalBalances / rowsPerPage));
+  const pageStart = (page - 1) * rowsPerPage;
+  const pageEnd = Math.min(pageStart + rowsPerPage, totalBalances);
+  const visibleBalances = sorted.slice(pageStart, pageEnd);
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, rowsPerPage]);
+
   return (
     <Box sx={{ flex: 1, width: '100%', minHeight: 'calc(100vh - 64px)', background: '#f5f5f5', p: { xs: 1, sm: 1 }, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
       <Card sx={{ width: '100%', maxWidth: 1100, m: '0 auto', mb: 3, boxShadow: 2, borderRadius: 3, background: '#f9fafb' }}>
@@ -231,7 +254,7 @@ export default function DoctorBalances() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {sorted.map((b: any, idx: number) => {
+                {visibleBalances.map((b: any, idx: number) => {
                   const id = getDoctorId(b);
                   const isNegative = isTrulyNegative(b.balance);
                   return (
@@ -256,6 +279,35 @@ export default function DoctorBalances() {
               </TableBody>
             </Table>
           </TableContainer>
+          <Box sx={{ mt: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', justifyContent: 'space-between', gap: 2, px: 1 }}>
+            <Typography variant="body2" sx={{ color: '#555' }}>
+              Showing {totalBalances === 0 ? 0 : pageStart + 1} - {pageEnd} of {totalBalances} doctors
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" sx={{ width: { xs: '100%', sm: 'auto' } }}>
+              <FormControl size="small" sx={{ minWidth: 130, background: '#fff', borderRadius: 1 }}>
+                <InputLabel id="rows-per-page-label-balances">Page size</InputLabel>
+                <Select
+                  labelId="rows-per-page-label-balances"
+                  value={rowsPerPage}
+                  label="Page size"
+                  onChange={e => setRowsPerPage(Number(e.target.value))}
+                >
+                  {[10, 20, 30].map(size => (
+                    <MenuItem key={size} value={size}>{size}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Pagination
+                count={pageCount}
+                page={page}
+                onChange={(_, value) => setPage(value)}
+                color="primary"
+                showFirstButton
+                showLastButton
+                shape="rounded"
+              />
+            </Stack>
+          </Box>
         </CardContent>
       </Card>
     </Box>

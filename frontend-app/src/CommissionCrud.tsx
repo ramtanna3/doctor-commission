@@ -23,6 +23,12 @@ import GlobalSnackbar from './components/GlobalSnackbar';
 import ConfirmDialog from './components/ConfirmDialog';
 import Autocomplete from '@mui/material/Autocomplete';
 import Tooltip from '@mui/material/Tooltip';
+import Select from '@mui/material/Select';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Pagination from '@mui/material/Pagination';
+import Stack from '@mui/material/Stack';
+import MenuItem from '@mui/material/MenuItem';
 
 export type CommissionMaster = {
   commissionId?: number;
@@ -48,6 +54,8 @@ export default function CommissionCrud() {
   const [sortBy, setSortBy] = useState<'doctor' | 'medical' | 'product' | 'commissionPercentage'>('doctor');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
@@ -223,6 +231,50 @@ export default function CommissionCrud() {
       setSortOrder('asc');
     }
   };
+
+  const filteredCommissions = commissions.filter(c => {
+    const s = search.toLowerCase();
+    return (
+      (c.doctor?.name || doctors.find(d => d.doctorId === (c.doctorId ?? (c.doctor as any)?.doctorId))?.name || '').toLowerCase().includes(s) ||
+      (c.medical?.name || medicals.find(m => m.medicalId === (c.medicalId ?? (c.medical as any)?.medicalId))?.name || '').toLowerCase().includes(s) ||
+      (c.product?.name || products.find(p => p.productId === (c.productId ?? (c.product as any)?.productId))?.name || '').toLowerCase().includes(s) ||
+      (c.commissionPercentage !== undefined && String(c.commissionPercentage).includes(s))
+    );
+  });
+
+  const sortedCommissions = [...filteredCommissions].sort((a, b) => {
+    let aVal = '', bVal = '';
+    if (sortBy === 'doctor') {
+      aVal = (a.doctor?.name || doctors.find(d => d.doctorId === (a.doctorId ?? (a.doctor as any)?.doctorId))?.name || '').toLowerCase();
+      bVal = (b.doctor?.name || doctors.find(d => d.doctorId === (b.doctorId ?? (b.doctor as any)?.doctorId))?.name || '').toLowerCase();
+    } else if (sortBy === 'medical') {
+      aVal = (a.medical?.name || medicals.find(m => m.medicalId === (a.medicalId ?? (a.medical as any)?.medicalId))?.name || '').toLowerCase();
+      bVal = (b.medical?.name || medicals.find(m => m.medicalId === (b.medicalId ?? (b.medical as any)?.medicalId))?.name || '').toLowerCase();
+    } else if (sortBy === 'product') {
+      aVal = (a.product?.name || products.find(p => p.productId === (a.productId ?? (a.product as any)?.productId))?.name || '').toLowerCase();
+      bVal = (b.product?.name || products.find(p => p.productId === (b.productId ?? (b.product as any)?.productId))?.name || '').toLowerCase();
+    } else if (sortBy === 'commissionPercentage') {
+      aVal = String(a.commissionPercentage);
+      bVal = String(b.commissionPercentage);
+    }
+    if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const totalCommissions = sortedCommissions.length;
+  const pageCount = Math.max(1, Math.ceil(totalCommissions / rowsPerPage));
+  const pageStart = (page - 1) * rowsPerPage;
+  const pageEnd = Math.min(pageStart + rowsPerPage, totalCommissions);
+  const visibleCommissions = sortedCommissions.slice(pageStart, pageEnd);
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, rowsPerPage]);
 
   return (
     <Box sx={{ flex: 1, width: '100%', minHeight: 'calc(100vh - 64px)', background: '#f5f5f5', p: { xs: 1, sm: 1 }, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
@@ -406,36 +458,7 @@ export default function CommissionCrud() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {commissions
-                    .filter(c => {
-                      const s = search.toLowerCase();
-                      return (
-                        (c.doctor?.name || doctors.find(d => d.doctorId === (c.doctorId ?? (c.doctor as any)?.doctorId))?.name || '').toLowerCase().includes(s) ||
-                        (c.medical?.name || medicals.find(m => m.medicalId === (c.medicalId ?? (c.medical as any)?.medicalId))?.name || '').toLowerCase().includes(s) ||
-                        (c.product?.name || products.find(p => p.productId === (c.productId ?? (c.product as any)?.productId))?.name || '').toLowerCase().includes(s) ||
-                        (c.commissionPercentage !== undefined && String(c.commissionPercentage).includes(s))
-                      );
-                    })
-                    .sort((a, b) => {
-                      let aVal = '', bVal = '';
-                      if (sortBy === 'doctor') {
-                        aVal = (a.doctor?.name || doctors.find(d => d.doctorId === (a.doctorId ?? (a.doctor as any)?.doctorId))?.name || '').toLowerCase();
-                        bVal = (b.doctor?.name || doctors.find(d => d.doctorId === (b.doctorId ?? (b.doctor as any)?.doctorId))?.name || '').toLowerCase();
-                      } else if (sortBy === 'medical') {
-                        aVal = (a.medical?.name || medicals.find(m => m.medicalId === (a.medicalId ?? (a.medical as any)?.medicalId))?.name || '').toLowerCase();
-                        bVal = (b.medical?.name || medicals.find(m => m.medicalId === (b.medicalId ?? (b.medical as any)?.medicalId))?.name || '').toLowerCase();
-                      } else if (sortBy === 'product') {
-                        aVal = (a.product?.name || products.find(p => p.productId === (a.productId ?? (a.product as any)?.productId))?.name || '').toLowerCase();
-                        bVal = (b.product?.name || products.find(p => p.productId === (b.productId ?? (b.product as any)?.productId))?.name || '').toLowerCase();
-                      } else if (sortBy === 'commissionPercentage') {
-                        aVal = String(a.commissionPercentage);
-                        bVal = String(b.commissionPercentage);
-                      }
-                      if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
-                      if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
-                      return 0;
-                    })
-                    .map((c, idx) => (
+                  {visibleCommissions.length > 0 ? visibleCommissions.map((c, idx) => (
                       <TableRow key={c.commissionId} sx={{ background: idx % 2 === 0 ? '#fff' : '#f9fafb' }}>
                         {editingRowId === c.commissionId ? (
                           <>
@@ -611,10 +634,45 @@ export default function CommissionCrud() {
                           </>
                         )}
                       </TableRow>
-                    ))}
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4, color: '#666' }}>
+                        No promotionals match your search.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
+            <Box sx={{ mt: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', justifyContent: 'space-between', gap: 2, px: 1 }}>
+              <Typography variant="body2" sx={{ color: '#555' }}>
+                Showing {totalCommissions === 0 ? 0 : pageStart + 1} - {pageEnd} of {totalCommissions} promotionals
+              </Typography>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" sx={{ width: { xs: '100%', sm: 'auto' } }}>
+                <FormControl size="small" sx={{ minWidth: 130, background: '#fff', borderRadius: 1 }}>
+                  <InputLabel id="rows-per-page-label-commission">Page size</InputLabel>
+                  <Select
+                    labelId="rows-per-page-label-commission"
+                    value={rowsPerPage}
+                    label="Page size"
+                    onChange={e => setRowsPerPage(Number(e.target.value))}
+                  >
+                    {[10, 20, 30].map(size => (
+                      <MenuItem key={size} value={size}>{size}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Pagination
+                  count={pageCount}
+                  page={page}
+                  onChange={(_, value) => setPage(value)}
+                  color="primary"
+                  showFirstButton
+                  showLastButton
+                  shape="rounded"
+                />
+              </Stack>
+            </Box>
           </Box>
         </CardContent>
       </Card>
