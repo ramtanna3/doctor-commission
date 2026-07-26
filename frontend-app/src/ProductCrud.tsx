@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
@@ -167,22 +167,22 @@ export default function ProductCrud() {
     }
   };
 
-  const filteredProducts = products.filter(p => {
+  const filteredProducts = useMemo(() => products.filter(p => {
     const s = search.toLowerCase();
     return (
       (p.name || '').toLowerCase().includes(s) ||
       (p.description || '').toLowerCase().includes(s) ||
       (p.defaultCommissionPercentage !== undefined && String(p.defaultCommissionPercentage).includes(s))
     );
-  });
+  }), [products, search]);
 
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
+  const sortedProducts = useMemo(() => [...filteredProducts].sort((a, b) => {
     const aVal = (a[sortBy] || '').toLowerCase();
     const bVal = (b[sortBy] || '').toLowerCase();
     if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
     if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
     return 0;
-  });
+  }), [filteredProducts, sortBy, sortOrder]);
 
   const totalProducts = sortedProducts.length;
   const pageCount = Math.max(1, Math.ceil(totalProducts / rowsPerPage));

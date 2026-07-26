@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
@@ -55,7 +55,7 @@ export default function DoctorBalances() {
     }
   };
 
-  const filtered = balances.filter((b: any) => {
+  const filtered = useMemo(() => balances.filter((b: any) => {
     const text = [
       b.doctor?.doctorId || b.doctor?.id,
       b.doctor?.name || '',
@@ -65,9 +65,9 @@ export default function DoctorBalances() {
       b.balance
     ].join(' ').toLowerCase();
     return text.includes(search.toLowerCase());
-  });
+  }), [balances, search]);
 
-  const sorted = [...filtered].sort((a: any, b: any) => {
+  const sorted = useMemo(() => [...filtered].sort((a: any, b: any) => {
     let aVal, bVal;
     if (sortBy === 'doctorId') {
       aVal = a.doctor?.doctorId || a.doctor?.id || '';
@@ -86,7 +86,7 @@ export default function DoctorBalances() {
     if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
     if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
     return 0;
-  });
+  }), [filtered, sortBy, sortOrder]);
 
   // Select all logic (only for negative balances)
   // Treat -0 as 0 for selection logic

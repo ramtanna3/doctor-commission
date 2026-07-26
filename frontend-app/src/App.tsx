@@ -133,17 +133,17 @@ function App() {
           border: 'none',
         }}>
           <Box sx={{ flex: 1, width: '100%', maxWidth: 1200, mx: 'auto', p: { xs: 1, sm: 2 }, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', background: 'transparent' }}>
-            {selected === 'doctor' && <DoctorCrud />}
-            {selected === 'medical' && <MedicalCrud />}
-            {selected === 'product' && <ProductCrud />}
-            {selected === 'commission' && <CommissionCrud />}
-            {selected === 'bulk-upload' && <BulkMasterUpload />}
-            {selected === 'process-sales' && <ProcessSalesFile />}
-            {selected === 'sales-transactions' && <SalesTransactions />}
-            {selected === 'doctor-balances' && <DoctorBalances />}
-            {selected === 'doctor-transactions' && <DoctorTransactions />}
-            {selected === 'add-doctor-transaction' && <AddDoctorTransaction />}
-            {selected === 'sync-doctor-wallet' && <SyncDoctorWallet />}
+            <Box sx={{ display: selected === 'doctor' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><DoctorCrud /></Box>
+            <Box sx={{ display: selected === 'medical' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><MedicalCrud /></Box>
+            <Box sx={{ display: selected === 'product' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><ProductCrud /></Box>
+            <Box sx={{ display: selected === 'commission' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><CommissionCrud /></Box>
+            <Box sx={{ display: selected === 'bulk-upload' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><BulkMasterUpload /></Box>
+            <Box sx={{ display: selected === 'process-sales' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><ProcessSalesFile /></Box>
+            <Box sx={{ display: selected === 'sales-transactions' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><SalesTransactions /></Box>
+            <Box sx={{ display: selected === 'doctor-balances' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><DoctorBalances /></Box>
+            <Box sx={{ display: selected === 'doctor-transactions' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><DoctorTransactions /></Box>
+            <Box sx={{ display: selected === 'add-doctor-transaction' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><AddDoctorTransaction /></Box>
+            <Box sx={{ display: selected === 'sync-doctor-wallet' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><SyncDoctorWallet /></Box>
           </Box>
         </Box>
       </Box>

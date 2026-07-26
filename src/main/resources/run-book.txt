@@ -21,6 +21,8 @@ npm run dev
 Step 1:
 Copy the script from
 db/migration/V1_Create_Company_Table.sql in mysql and run all
+Run another script to create indexes - 
+db/migration/V2_Add_Performance_indexes.sql
 
 Step 2:
 Ensure users and company tables has Ids as 1,2,3

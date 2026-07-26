@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
@@ -212,7 +212,7 @@ export default function MedicalCrud() {
   };
 
 
-  const filteredMedicals = medicals.filter(m => {
+  const filteredMedicals = useMemo(() => medicals.filter(m => {
     const s = search.toLowerCase();
     return (
       (m.name || '').toLowerCase().includes(s) ||
@@ -220,15 +220,15 @@ export default function MedicalCrud() {
       (m.phoneNumber || '').toLowerCase().includes(s) ||
       (m.email || '').toLowerCase().includes(s)
     );
-  });
+  }), [medicals, search]);
 
-  const sortedMedicals = [...filteredMedicals].sort((a, b) => {
+  const sortedMedicals = useMemo(() => [...filteredMedicals].sort((a, b) => {
     const aVal = (a[sortBy] || '').toLowerCase();
     const bVal = (b[sortBy] || '').toLowerCase();
     if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
     if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
     return 0;
-  });
+  }), [filteredMedicals, sortBy, sortOrder]);
 
   const totalMedicals = sortedMedicals.length;
   const pageCount = Math.max(1, Math.ceil(totalMedicals / rowsPerPage));

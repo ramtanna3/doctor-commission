@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
@@ -232,27 +232,43 @@ export default function CommissionCrud() {
     }
   };
 
-  const filteredCommissions = commissions.filter(c => {
+  const doctorMap = useMemo(() =>
+    Object.fromEntries(doctors.map(d => [d.doctorId, d])), [doctors]);
+  const medicalMap = useMemo(() =>
+    Object.fromEntries(medicals.map(m => [m.medicalId, m])), [medicals]);
+  const productMap = useMemo(() =>
+    Object.fromEntries(products.map(p => [p.productId, p])), [products]);
+
+  const filteredCommissions = useMemo(() => commissions.filter(c => {
     const s = search.toLowerCase();
+    const doctorId = c.doctorId ?? (c.doctor as any)?.doctorId;
+    const medicalId = c.medicalId ?? (c.medical as any)?.medicalId;
+    const productId = c.productId ?? (c.product as any)?.productId;
     return (
-      (c.doctor?.name || doctors.find(d => d.doctorId === (c.doctorId ?? (c.doctor as any)?.doctorId))?.name || '').toLowerCase().includes(s) ||
-      (c.medical?.name || medicals.find(m => m.medicalId === (c.medicalId ?? (c.medical as any)?.medicalId))?.name || '').toLowerCase().includes(s) ||
-      (c.product?.name || products.find(p => p.productId === (c.productId ?? (c.product as any)?.productId))?.name || '').toLowerCase().includes(s) ||
+      (c.doctor?.name || doctorMap[doctorId]?.name || '').toLowerCase().includes(s) ||
+      (c.medical?.name || medicalMap[medicalId]?.name || '').toLowerCase().includes(s) ||
+      (c.product?.name || productMap[productId]?.name || '').toLowerCase().includes(s) ||
       (c.commissionPercentage !== undefined && String(c.commissionPercentage).includes(s))
     );
-  });
+  }), [commissions, search, doctorMap, medicalMap, productMap]);
 
-  const sortedCommissions = [...filteredCommissions].sort((a, b) => {
+  const sortedCommissions = useMemo(() => [...filteredCommissions].sort((a, b) => {
     let aVal = '', bVal = '';
+    const aDoctorId = a.doctorId ?? (a.doctor as any)?.doctorId;
+    const bDoctorId = b.doctorId ?? (b.doctor as any)?.doctorId;
+    const aMedicalId = a.medicalId ?? (a.medical as any)?.medicalId;
+    const bMedicalId = b.medicalId ?? (b.medical as any)?.medicalId;
+    const aProductId = a.productId ?? (a.product as any)?.productId;
+    const bProductId = b.productId ?? (b.product as any)?.productId;
     if (sortBy === 'doctor') {
-      aVal = (a.doctor?.name || doctors.find(d => d.doctorId === (a.doctorId ?? (a.doctor as any)?.doctorId))?.name || '').toLowerCase();
-      bVal = (b.doctor?.name || doctors.find(d => d.doctorId === (b.doctorId ?? (b.doctor as any)?.doctorId))?.name || '').toLowerCase();
+      aVal = (a.doctor?.name || doctorMap[aDoctorId]?.name || '').toLowerCase();
+      bVal = (b.doctor?.name || doctorMap[bDoctorId]?.name || '').toLowerCase();
     } else if (sortBy === 'medical') {
-      aVal = (a.medical?.name || medicals.find(m => m.medicalId === (a.medicalId ?? (a.medical as any)?.medicalId))?.name || '').toLowerCase();
-      bVal = (b.medical?.name || medicals.find(m => m.medicalId === (b.medicalId ?? (b.medical as any)?.medicalId))?.name || '').toLowerCase();
+      aVal = (a.medical?.name || medicalMap[aMedicalId]?.name || '').toLowerCase();
+      bVal = (b.medical?.name || medicalMap[bMedicalId]?.name || '').toLowerCase();
     } else if (sortBy === 'product') {
-      aVal = (a.product?.name || products.find(p => p.productId === (a.productId ?? (a.product as any)?.productId))?.name || '').toLowerCase();
-      bVal = (b.product?.name || products.find(p => p.productId === (b.productId ?? (b.product as any)?.productId))?.name || '').toLowerCase();
+      aVal = (a.product?.name || productMap[aProductId]?.name || '').toLowerCase();
+      bVal = (b.product?.name || productMap[bProductId]?.name || '').toLowerCase();
     } else if (sortBy === 'commissionPercentage') {
       aVal = String(a.commissionPercentage);
       bVal = String(b.commissionPercentage);
@@ -260,7 +276,7 @@ export default function CommissionCrud() {
     if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
     if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
     return 0;
-  });
+  }), [filteredCommissions, sortBy, sortOrder, doctorMap, medicalMap, productMap]);
 
   const totalCommissions = sortedCommissions.length;
   const pageCount = Math.max(1, Math.ceil(totalCommissions / rowsPerPage));

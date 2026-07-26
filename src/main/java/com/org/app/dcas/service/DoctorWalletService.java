@@ -16,8 +16,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class DoctorWalletService {
@@ -165,9 +168,24 @@ public class DoctorWalletService {
     public List<DoctorWalletBalanceResponse> getAllDoctorBalancesForCompany() {
         Long companyId = companyContext.getCompanyId();
         List<DoctorMaster> doctors = doctorMasterRepository.findByCompanyId(companyId);
+        if (doctors.isEmpty()) return java.util.Collections.emptyList();
+
+        List<Long> doctorIds = doctors.stream()
+                .map(DoctorMaster::getDoctorId)
+                .collect(Collectors.toList());
+
+        // Single GROUP BY query instead of N per-doctor queries
+        Map<Long, Double> balanceMap = new HashMap<>();
+        for (Object[] row : walletLedgerRepository.findBalancesByDoctorIds(doctorIds)) {
+            Long doctorId = ((Number) row[0]).longValue();
+            Double balance = row[1] != null ? ((Number) row[1]).doubleValue() : 0.0;
+            balanceMap.put(doctorId, balance);
+        }
+
         List<DoctorWalletBalanceResponse> responses = new java.util.ArrayList<>();
         for (DoctorMaster doctor : doctors) {
-            responses.add(getWalletBalance(doctor.getDoctorId()));
+            double balance = balanceMap.getOrDefault(doctor.getDoctorId(), 0.0);
+            responses.add(new DoctorWalletBalanceResponse(doctor, balance));
         }
         return responses;
     }

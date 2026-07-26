@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import LoadingSpinner from './components/LoadingSpinner';
 import GlobalSnackbar from './components/GlobalSnackbar';
 import Card from '@mui/material/Card';
@@ -114,7 +114,7 @@ export default function DoctorTransactions() {
     }
   };
 
-  const filteredTxns = transactions.filter((t: any) => {
+  const filteredTxns = useMemo(() => transactions.filter((t: any) => {
     if (!selectedReferenceTypes.includes(t.referenceType)) return false;
     const dateStr = t.transactionDate || '';
     if (dateFrom && dateStr && dateStr < dateFrom) return false;
@@ -130,9 +130,9 @@ export default function DoctorTransactions() {
       .join(' ')
       .toLowerCase();
     return text.includes(search.toLowerCase());
-  });
+  }), [transactions, search, selectedReferenceTypes, dateFrom, dateTo]);
 
-  const sortedTxns = [...filteredTxns].sort((a: any, b: any) => {
+  const sortedTxns = useMemo(() => [...filteredTxns].sort((a: any, b: any) => {
     let aVal = a[sortBy];
     let bVal = b[sortBy];
     if (sortBy === 'referenceType') {
@@ -149,7 +149,7 @@ export default function DoctorTransactions() {
     if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
     if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
     return 0;
-  });
+  }), [filteredTxns, sortBy, sortOrder]);
 
   const totalTxns = sortedTxns.length;
   const txPageCount = Math.max(1, Math.ceil(totalTxns / rowsPerPage));

@@ -5,6 +5,7 @@ import com.org.app.dcas.model.SalesTransaction;
 import java.util.List;
 import java.util.Set;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -21,8 +22,34 @@ public interface SalesTransactionRepository extends JpaRepository<SalesTransacti
     @Query("SELECT tx FROM SalesTransaction tx WHERE tx.doctor.doctorId = :doctorId AND tx.company.companyId = :companyId")
     List<SalesTransaction> findByDoctorIdAndCompanyId(Long doctorId, Long companyId);
 
+    // Single JOIN query covers all associations accessed by SalesTransactionResponse.from()
+    // medical.territory.company: MedicalResponse.territory is serialised as full entity
+    // doctor.mr.*: DoctorResponse.mr is serialised as full entity including its company/territory
+    @EntityGraph(attributePaths = {
+        "distributor",
+        "medical", "medical.territory", "medical.territory.company",
+        "product",
+        "doctor", "doctor.mr", "doctor.mr.company", "doctor.mr.territory", "doctor.mr.territory.company",
+        "fileAudit"
+    })
     List<SalesTransaction> findByDistributorDistributorId(Long distributorId);
+
+    @EntityGraph(attributePaths = {
+        "distributor",
+        "medical", "medical.territory", "medical.territory.company",
+        "product",
+        "doctor", "doctor.mr", "doctor.mr.company", "doctor.mr.territory", "doctor.mr.territory.company",
+        "fileAudit"
+    })
     List<SalesTransaction> findByDistributorDistributorIdAndIsMatchedTrue(Long distributorId);
+
+    @EntityGraph(attributePaths = {
+        "distributor",
+        "medical", "medical.territory", "medical.territory.company",
+        "product",
+        "doctor", "doctor.mr", "doctor.mr.company", "doctor.mr.territory", "doctor.mr.territory.company",
+        "fileAudit"
+    })
     List<SalesTransaction> findByDistributorDistributorIdAndIsMatchedFalse(Long distributorId);
 }
 
