@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
+import { apiFetch } from './api';
 import LoadingSpinner from './components/LoadingSpinner';
 import GlobalSnackbar from './components/GlobalSnackbar';
 import Card from '@mui/material/Card';
@@ -75,7 +76,7 @@ export default function DoctorTransactions() {
     setLoading(true);
     setError(null);
     try {
-  const res = await fetch('/api/doctors', { headers: { 'x-user-id': '1' } });
+  const res = await apiFetch('/api/doctors');
       if (!res.ok) throw new Error('Failed to fetch doctors');
       const data = await res.json();
       setDoctors(data);
@@ -93,14 +94,14 @@ export default function DoctorTransactions() {
       // Find doctor details from list
       const doc = doctors.find((d: any) => String(d.doctorId || d.id) === String(doctorId));
       // Fetch transactions
-  const res = await fetch(`/api/doctor-wallet/ledger/${doctorId}`, { headers: { 'x-user-id': '1' } });
+  const res = await apiFetch(`/api/doctor-wallet/ledger/${doctorId}`);
       if (!res.ok) throw new Error('Failed to fetch doctor transactions');
       const data = await res.json();
       setDoctorDetails(data.doctor || doc);
       setTransactions(data.transactions || []);
 
       // Fetch balance from separate API
-  const balanceRes = await fetch(`/api/doctor-wallet/balance/${doctorId}`, { headers: { 'x-user-id': '1' } });
+  const balanceRes = await apiFetch(`/api/doctor-wallet/balance/${doctorId}`);
       if (balanceRes.ok) {
         const balanceData = await balanceRes.json();
         setBalance(balanceData.balance ?? null);

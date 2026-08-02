@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { apiFetch } from './api';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
@@ -50,7 +51,7 @@ export default function AddDoctorTransaction() {
 
   const fetchDoctors = async () => {
     try {
-        const res = await fetch('/api/doctors', { headers: { 'x-user-id': '1' } });
+        const res = await apiFetch('/api/doctors');
       if (!res.ok) throw new Error('Failed to fetch doctors');
       setDoctors(await res.json());
     } catch (e: any) {
@@ -66,7 +67,7 @@ export default function AddDoctorTransaction() {
     }
 
     try {
-      const res = await fetch(`/api/doctor-wallet/balance/${selectedDoctorId}`, { headers: { 'x-user-id': '1' } });
+      const res = await apiFetch(`/api/doctor-wallet/balance/${selectedDoctorId}`);
       if (!res.ok) throw new Error('Failed to fetch wallet balance');
       const data = await res.json();
       setWalletBalance(data.balance ?? null);
@@ -130,11 +131,10 @@ export default function AddDoctorTransaction() {
         debitAmount: Number(debitAmount) || 0,
         remarks,
       };
-      const res = await fetch('/api/doctor-wallet/add-transaction', {
+      const res = await apiFetch('/api/doctor-wallet/add-transaction', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': '1',
         },
         body: JSON.stringify(payload),
       });
@@ -151,7 +151,7 @@ export default function AddDoctorTransaction() {
       // If backend didn't return a balance, fetch it fresh
       if (newBalance === null) {
         try {
-          const balRes = await fetch(`/api/doctor-wallet/balance/${doctorId}`, { headers: { 'x-user-id': '1' } });
+          const balRes = await apiFetch(`/api/doctor-wallet/balance/${doctorId}`);
           if (balRes.ok) {
             const balData = await balRes.json();
             newBalance = balData.balance ?? null;

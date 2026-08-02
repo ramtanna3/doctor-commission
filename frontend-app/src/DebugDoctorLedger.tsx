@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import LoadingSpinner from './components/LoadingSpinner';
 import GlobalSnackbar from './components/GlobalSnackbar';
+import { apiFetch } from './api';
 
 export default function DebugDoctorLedger() {
   const [data, setData] = useState<any>(null);
@@ -13,7 +14,7 @@ export default function DebugDoctorLedger() {
     setLoading(true);
     setError(null);
     try {
-  const res = await fetch(`/api/doctor-wallet/ledger/${doctorId}`, { headers: { 'x-user-id': '1' } });
+  const res = await apiFetch(`/api/doctor-wallet/ledger/${doctorId}`);
       if (!res.ok) throw new Error('Failed to fetch doctor ledger');
       setData(await res.json());
     } catch (e: any) {

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { apiFetch } from './api';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
@@ -45,7 +46,7 @@ export default function DoctorBalances() {
     setLoading(true);
     setError(null);
     try {
-  const res = await fetch('/api/doctor-wallet/balance/company', { headers: { 'x-user-id': '1' } });
+  const res = await apiFetch('/api/doctor-wallet/balance/company');
       if (!res.ok) throw new Error('Failed to fetch doctor balances');
       setBalances(await res.json());
     } catch (e: any) {
@@ -162,11 +163,10 @@ export default function DoctorBalances() {
                   const doctorBalances = sorted
                     .filter(b => selected.includes(getDoctorId(b)))
                     .map(b => ({ doctorId: b.doctor?.doctorId || b.doctor?.id, balance: b.balance }));
-                  const res = await fetch('/api/doctor-wallet/payout-commission', {
+                  const res = await apiFetch('/api/doctor-wallet/payout-commission', {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
-                      'x-user-id': '1',
                     },
                     body: JSON.stringify({ doctorBalances }),
                   });

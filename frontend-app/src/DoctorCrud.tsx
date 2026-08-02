@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { apiFetch } from './api';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
@@ -61,9 +62,7 @@ export default function DoctorCrud() {
   const fetchDoctors = async () => {
     setLoading(true);
     try {
-      const res = await fetch(API_BASE, {
-        headers: { 'x-user-id': '1' }
-      });
+      const res = await apiFetch(API_BASE);
       if (!res.ok) throw new Error('Failed to fetch doctors');
       setDoctors(await res.json());
     } catch (e: any) {
@@ -112,9 +111,9 @@ export default function DoctorCrud() {
     try {
       const method = editingId ? 'PUT' : 'POST';
       const url = editingId ? `${API_BASE}/${editingId}` : API_BASE;
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json', 'x-user-id': '1' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
       if (!res.ok) throw new Error('Failed to save doctor');
@@ -167,9 +166,9 @@ export default function DoctorCrud() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/${editingRowId}`, {
+      const res = await apiFetch(`${API_BASE}/${editingRowId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-user-id': '1' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(rowEditForm),
       });
       if (!res.ok) throw new Error('Failed to update doctor');
@@ -190,7 +189,7 @@ export default function DoctorCrud() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/${confirmDeleteId}`, { method: 'DELETE', headers: { 'x-user-id': '1' } });
+      const res = await apiFetch(`${API_BASE}/${confirmDeleteId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete');
       setSuccess('Doctor deleted successfully!');
       setShowSuccessDialog(true);

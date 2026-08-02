@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { apiFetch } from './api';
 import GlobalSnackbar from './components/GlobalSnackbar';
 import SuccessDialog from './components/SuccessDialog';
 import Card from '@mui/material/Card';
@@ -11,7 +12,7 @@ import IconButton from '@mui/material/IconButton';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LinearProgress from '@mui/material/LinearProgress';
 
-function BulkMasterUpload() {
+function BulkMasterUpload({ onSuccess }: { onSuccess?: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -61,9 +62,8 @@ function BulkMasterUpload() {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await fetch('/api/master-data/upload', {
+      const res = await apiFetch('/api/master-data/upload', {
         method: 'POST',
-  headers: { 'x-user-id': '1' },
         body: formData,
       });
       setProgress(80);
@@ -71,6 +71,7 @@ function BulkMasterUpload() {
       setProgress(100);
       setSuccess('Upload successful!');
       setShowSuccessDialog(true);
+      if (onSuccess) onSuccess();
       setFile(null);
       if (inputRef.current) inputRef.current.value = '';
     } catch (e: any) {

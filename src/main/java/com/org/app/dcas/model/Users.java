@@ -28,6 +28,12 @@ public class Users {
     @Column(name = "email")
     private String email;
 
+    @Column(name = "username", unique = true)
+    private String username;
+
+    @Column(name = "password_hash")
+    private String passwordHash;
+
     @Column(name = "is_active")
     private Boolean isActive = true;
 
@@ -70,6 +76,12 @@ public class Users {
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+
+    public String getPasswordHash() { return passwordHash; }
+    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
 
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }

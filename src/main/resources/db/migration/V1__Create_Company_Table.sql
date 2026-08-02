@@ -1,4 +1,4 @@
-create schema dcas_db;
+CREATE SCHEMA IF NOT EXISTS dcas_db;
 
 USE dcas_db;
 

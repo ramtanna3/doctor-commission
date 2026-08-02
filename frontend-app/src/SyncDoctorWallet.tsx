@@ -9,6 +9,7 @@ import SuccessDialog from './components/SuccessDialog';
 import Box from '@mui/material/Box';
 import Autocomplete from '@mui/material/Autocomplete';
 import TextField from '@mui/material/TextField';
+import { apiFetch } from './api';
 
 export default function SyncDoctorWallet() {
   const [doctors, setDoctors] = useState<any[]>([]);
@@ -24,7 +25,7 @@ export default function SyncDoctorWallet() {
 
   const fetchDoctors = async () => {
     try {
-  const res = await fetch('/api/doctors', { headers: { 'x-user-id': '1' } });
+  const res = await apiFetch('/api/doctors');
       if (!res.ok) throw new Error('Failed to fetch doctors');
       setDoctors(await res.json());
     } catch (e: any) {
@@ -36,7 +37,7 @@ export default function SyncDoctorWallet() {
     setLoading(true);
     setError(null);
     try {
-  const res = await fetch(`/api/doctor-wallet/sync/${selectedDoctor}`, { method: 'POST', headers: { 'x-user-id': '1' } });
+  const res = await apiFetch(`/api/doctor-wallet/sync/${selectedDoctor}`, { method: 'POST' });
       if (!res.ok) throw new Error('Failed to sync doctor wallet');
       setSuccess('Doctor wallet synced successfully!');
       setShowSuccessDialog(true);
@@ -51,7 +52,7 @@ export default function SyncDoctorWallet() {
     setLoading(true);
     setError(null);
     try {
-  const res = await fetch('/api/doctor-wallet/sync/all', { method: 'POST', headers: { 'x-user-id': '1' } });
+  const res = await apiFetch('/api/doctor-wallet/sync/all', { method: 'POST' });
       if (!res.ok) throw new Error('Failed to sync all doctor wallets');
       setSuccess('All doctor wallets synced successfully!');
       setShowSuccessDialog(true);

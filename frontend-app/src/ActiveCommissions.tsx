@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import LoadingSpinner from './components/LoadingSpinner';
 import GlobalSnackbar from './components/GlobalSnackbar';
+import { apiFetch } from './api';
 
 export default function ActiveCommissions() {
   const [commissions, setCommissions] = useState<any[]>([]);
@@ -15,7 +16,7 @@ export default function ActiveCommissions() {
     setLoading(true);
     setError(null);
     try {
-  const res = await fetch('/api/commissions/active', { headers: { 'x-user-id': '1' } });
+  const res = await apiFetch('/api/commissions/active');
       if (!res.ok) throw new Error('Failed to fetch active commissions');
       setCommissions(await res.json());
     } catch (e: any) {

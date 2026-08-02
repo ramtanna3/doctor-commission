@@ -62,32 +62,16 @@ public class MasterDataUploadService {
             Long companyId = null;
             Long distributorId = null;
 
-            // 1. Company
-            Sheet companySheet = workbook.getSheet("company");
-            if (companySheet != null) {
-                for (Row row : companySheet) {
-                    if (row.getRowNum() == 0) continue;
-                    String companyName = getString(row.getCell(0));
-                    String companyAddress = getString(row.getCell(1));
-                    String companyPhone = getString(row.getCell(2));
-                    String companyEmail = getString(row.getCell(3));
-                    if (companyName == null || companyName.trim().isEmpty()) continue;
-                    Company company = companyRepository.findByName(companyName).orElse(null);
-                    if (company == null) {
-                        company = new Company();
-                        company.setName(companyName);
-                        company.setAddress(companyAddress);
-                        company.setPhoneNumber(companyPhone);
-                        company.setEmail(companyEmail);
-                        // Set createdBy/updatedBy from context
-                        String userIdStr = companyContext.getUserId() != null ? companyContext.getUserId().toString() : "system";
-                        company.setCreatedBy(userIdStr);
-                        company.setUpdatedBy(userIdStr);
-                        company = companyRepository.save(company);
-                    }
-                    companyId = company.getCompanyId();
-                }
+            // 1. Company — always use the logged-in user's company from context.
+            // Never create or look up a company from the Excel file to avoid
+            // creating orphan companies that are not linked to the current user.
+            companyId = companyContext.getCompanyId();
+            if (companyId == null) {
+                response.put("status", "error");
+                response.put("errorMessage", "No company context found for current user");
+                return response;
             }
+            log.info("processMasterDataExcel - using companyId={} from context", companyId);
 
             // 2. Distributor
             Sheet distributorSheet = workbook.getSheet("distributor");

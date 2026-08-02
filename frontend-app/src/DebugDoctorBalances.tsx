@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import LoadingSpinner from './components/LoadingSpinner';
 import GlobalSnackbar from './components/GlobalSnackbar';
+import { apiFetch } from './api';
 
 export default function DebugDoctorBalances() {
   const [balances, setBalances] = useState<any>(null);
@@ -16,7 +17,7 @@ export default function DebugDoctorBalances() {
     setLoading(true);
     setError(null);
     try {
-  const res = await fetch('/api/doctor-wallet/balance/company', { headers: { 'x-user-id': '1' } });
+  const res = await apiFetch('/api/doctor-wallet/balance/company');
       if (!res.ok) throw new Error('Failed to fetch doctor balances');
       setBalances(await res.json());
     } catch (e: any) {

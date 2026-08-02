@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
+import { apiFetch } from './api';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
@@ -19,7 +20,7 @@ import GlobalSnackbar from './components/GlobalSnackbar';
 import SuccessDialog from './components/SuccessDialog';
 import LoadingSpinner from './components/LoadingSpinner';
 
-export default function ProcessSalesFile() {
+export default function ProcessSalesFile({ onSuccess }: { onSuccess?: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [distributors, setDistributors] = useState<any[]>([]);
   const [selectedDistributor, setSelectedDistributor] = useState<string>('');
@@ -36,7 +37,7 @@ export default function ProcessSalesFile() {
   }, []);
 
   const fetchDistributors = async () => {
-  const res = await fetch('/api/distributors', { headers: { 'x-user-id': '1' } });
+  const res = await apiFetch('/api/distributors');
     if (res.ok) setDistributors(await res.json());
   };
 
@@ -84,9 +85,8 @@ export default function ProcessSalesFile() {
     formData.append('file', file);
     formData.append('distributorId', selectedDistributor);
     try {
-      const res = await fetch('/api/commissions/process-sales-excel', {
+      const res = await apiFetch('/api/commissions/process-sales-excel', {
         method: 'POST',
-  headers: { 'x-user-id': '1' },
         body: formData,
       });
       setProgress(80);
@@ -98,6 +98,7 @@ export default function ProcessSalesFile() {
       if ([data.totalRows, data.successCount, data.nigoCount, data.unmatchedCount, data.errorCount].some(v => v != null) && !(data.errors && data.errors.length > 0)) {
         setSuccess('Sales file processed successfully!');
         setShowSuccessDialog(true);
+        if (onSuccess) onSuccess();
       }
       setFile(null);
       setSelectedDistributor('');

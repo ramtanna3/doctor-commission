@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { apiFetch } from './api';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
@@ -70,7 +71,7 @@ export default function SalesTransactions() {
   }, [selectedDistributor]);
 
   const fetchDistributors = async () => {
-  const res = await fetch('/api/distributors', { headers: { 'x-user-id': '1' } });
+  const res = await apiFetch('/api/distributors');
     if (res.ok) setDistributors(await res.json());
   };
 
@@ -78,7 +79,7 @@ export default function SalesTransactions() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/sales-transactions/by-distributor/${distributorId}/all`, { headers: { 'x-user-id': '1' } });
+      const res = await apiFetch(`/api/sales-transactions/by-distributor/${distributorId}/all`);
       if (!res.ok) throw new Error('Failed to fetch sales transactions');
       const data = await res.json();
       setTransactions(data.transactions || []);
@@ -93,7 +94,7 @@ export default function SalesTransactions() {
 
   const fetchDoctors = async () => {
     try {
-      const res = await fetch('/api/doctors/active', { headers: { 'x-user-id': '1' } });
+      const res = await apiFetch('/api/doctors/active');
       if (!res.ok) throw new Error('Failed to fetch doctors');
       const data = await res.json();
       setDoctors(data || []);
@@ -109,11 +110,10 @@ export default function SalesTransactions() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/sales-transactions/assign-doctor', {
+      const res = await apiFetch('/api/sales-transactions/assign-doctor', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': '1'
         },
         body: JSON.stringify({
           salesTransactionIds,

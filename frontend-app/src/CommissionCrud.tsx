@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { apiFetch } from './api';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
@@ -72,21 +73,21 @@ export default function CommissionCrud() {
   }, []);
 
   const fetchDoctors = async () => {
-    const res = await fetch('/api/doctors', { headers: { 'x-user-id': '1' } });
+    const res = await apiFetch('/api/doctors');
     setDoctors(await res.json());
   };
   const fetchMedicals = async () => {
-    const res = await fetch('/api/medicals', { headers: { 'x-user-id': '1' } });
+    const res = await apiFetch('/api/medicals');
     setMedicals(await res.json());
   };
   const fetchProducts = async () => {
-    const res = await fetch('/api/products', { headers: { 'x-user-id': '1' } });
+    const res = await apiFetch('/api/products');
     setProducts(await res.json());
   };
   const fetchCommissions = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/active`, { headers: { 'x-user-id': '1' } });
+      const res = await apiFetch(`${API_BASE}/active`);
       if (!res.ok) throw new Error('Failed to fetch promotionals');
       setCommissions(await res.json());
     } catch (e: any) {
@@ -134,9 +135,9 @@ export default function CommissionCrud() {
         product: form.productId ? { productId: form.productId } : undefined,
         isActive: form.isActive
       };
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json', 'x-user-id': '1' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('Failed to save promotional');
@@ -180,9 +181,9 @@ export default function CommissionCrud() {
         product: rowEditForm.productId ? { productId: rowEditForm.productId } : undefined,
         isActive: rowEditForm.isActive
       };
-      const res = await fetch(`${API_BASE}/${editingRowId}`, {
+      const res = await apiFetch(`${API_BASE}/${editingRowId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-user-id': '1' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('Failed to update promotional');
@@ -211,7 +212,7 @@ export default function CommissionCrud() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/${confirmDeleteId}`, { method: 'DELETE', headers: { 'x-user-id': '1' } });
+      const res = await apiFetch(`${API_BASE}/${confirmDeleteId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete');
       setSuccess('Promotional deleted successfully!');
       fetchCommissions();
