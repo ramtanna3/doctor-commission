@@ -30,7 +30,7 @@ const REFERENCE_TYPE_OPTIONS = [
   { value: 'ADJUSTMENT', label: 'Adjustment' },
 ];
 
-export default function AddDoctorTransaction() {
+export default function AddDoctorTransaction({ onSuccess }: { onSuccess?: () => void }) {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [doctors, setDoctors] = useState<any[]>([]);
   const [doctorId, setDoctorId] = useState('');
@@ -305,7 +305,7 @@ export default function AddDoctorTransaction() {
             <SuccessDialog
               open={showSuccessDialog}
               message={success || ''}
-              onClose={() => { setShowSuccessDialog(false); setTransactionSummary(null); }}
+              onClose={() => { setShowSuccessDialog(false); setTransactionSummary(null); if (onSuccess) onSuccess(); }}
               details={transactionSummary ? (
                 <Box sx={{ textAlign: 'left', px: 1 }}>
                   <Typography sx={{ fontWeight: 600 }}>Doctor: {transactionSummary.doctorName || `#${transactionSummary.doctorId}`}</Typography>

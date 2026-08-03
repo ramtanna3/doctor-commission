@@ -214,11 +214,11 @@ function App() {
             <Box sx={{ display: selected === 'product' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><ProductCrud key={refreshKey} /></Box>
             <Box sx={{ display: selected === 'commission' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><CommissionCrud key={refreshKey} /></Box>
             <Box sx={{ display: selected === 'bulk-upload' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><BulkMasterUpload key={refreshKey} onSuccess={() => setRefreshKey(k => k + 1)} /></Box>
-            <Box sx={{ display: selected === 'process-sales' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><ProcessSalesFile key={refreshKey} onSuccess={() => setRefreshKey(k => k + 1)} /></Box>
+            <Box sx={{ display: selected === 'process-sales' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><ProcessSalesFile onSuccess={() => setRefreshKey(k => k + 1)} /></Box>
             <Box sx={{ display: selected === 'sales-transactions' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><SalesTransactions key={refreshKey} /></Box>
             <Box sx={{ display: selected === 'doctor-balances' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><DoctorBalances key={refreshKey} /></Box>
             <Box sx={{ display: selected === 'doctor-transactions' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><DoctorTransactions key={refreshKey} /></Box>
-            <Box sx={{ display: selected === 'add-doctor-transaction' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><AddDoctorTransaction key={refreshKey} /></Box>
+            <Box sx={{ display: selected === 'add-doctor-transaction' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><AddDoctorTransaction key={refreshKey} onSuccess={() => setRefreshKey(k => k + 1)} /></Box>
             <Box sx={{ display: selected === 'sync-doctor-wallet' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><SyncDoctorWallet key={refreshKey} /></Box>
             <Box sx={{ display: selected === 'change-password' ? 'flex' : 'none', flexDirection: 'column', width: '100%' }}><ChangePassword key={refreshKey} /></Box>
           </Box>

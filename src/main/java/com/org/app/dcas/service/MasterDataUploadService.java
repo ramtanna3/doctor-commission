@@ -3,7 +3,6 @@ package com.org.app.dcas.service;
 import com.org.app.dcas.model.DoctorMaster;
 import com.org.app.dcas.model.CommissionMaster;
 import com.org.app.dcas.model.ProductMaster;
-import com.org.app.dcas.model.Company;
 import com.org.app.dcas.model.Distributor;
 import com.org.app.dcas.model.MedicalMaster;
 import com.org.app.dcas.repository.DoctorMasterRepository;
@@ -104,6 +103,10 @@ public class MasterDataUploadService {
             int totalProducts = 0;
             int totalMedicals = 0;
             int totalCommissions = 0;
+            int updatedDoctors = 0;
+            int updatedProducts = 0;
+            int updatedMedicals = 0;
+            int updatedCommissions = 0;
 
             Map<String, DoctorMaster> doctorMap = new HashMap<>();
             Map<String, ProductMaster> productMap = new HashMap<>();
@@ -116,24 +119,30 @@ public class MasterDataUploadService {
                     if (row.getRowNum() == 0) continue;
                     String doctorName = getString(row.getCell(0));
                     if (doctorName == null || doctorName.trim().isEmpty()) continue;
-                    if (doctorMap.containsKey(doctorName)) {
-                        throw new RuntimeException("Duplicate doctor name found: " + doctorName);
-                    }
-                    DoctorMaster doctor = new DoctorMaster();
-                    doctor.setName(doctorName);
-                    doctor.setSpecialization(getString(row.getCell(1)));
-                    doctor.setPhoneNumber(getString(row.getCell(2)));
-                    doctor.setEmail(getString(row.getCell(3)));
-                    doctor.setCompany(companyRepository.findById(companyId).orElse(null));
-                    // Set createdBy/updatedBy from context
+                    if (doctorMap.containsKey(doctorName)) continue; // skip within-file duplicates
                     String userIdStr = companyContext.getUserId() != null ? companyContext.getUserId().toString() : "system";
-                    doctor.setCreatedBy(userIdStr);
-                    doctor.setUpdatedBy(userIdStr);
-                    //TODO : MR pending
-                    // set other fields as needed
+                    java.util.Optional<DoctorMaster> existing = doctorMasterRepository.findByNameIgnoreCaseAndCompanyIdAndIsActiveTrue(doctorName.trim(), companyId);
+                    DoctorMaster doctor;
+                    if (existing.isPresent()) {
+                        doctor = existing.get();
+                        doctor.setSpecialization(getString(row.getCell(1)));
+                        doctor.setPhoneNumber(getString(row.getCell(2)));
+                        doctor.setEmail(getString(row.getCell(3)));
+                        doctor.setUpdatedBy(userIdStr);
+                        updatedDoctors++;
+                    } else {
+                        doctor = new DoctorMaster();
+                        doctor.setName(doctorName);
+                        doctor.setSpecialization(getString(row.getCell(1)));
+                        doctor.setPhoneNumber(getString(row.getCell(2)));
+                        doctor.setEmail(getString(row.getCell(3)));
+                        doctor.setCompany(companyRepository.findById(companyId).orElse(null));
+                        doctor.setCreatedBy(userIdStr);
+                        doctor.setUpdatedBy(userIdStr);
+                        totalDoctors++;
+                    }
                     DoctorMaster savedDoctor = doctorMasterRepository.save(doctor);
-                    doctorMap.put(savedDoctor.getName(), savedDoctor);
-                    totalDoctors++;
+                    doctorMap.put(savedDoctor.getName().trim().toLowerCase(), savedDoctor);
                 }
             }
 
@@ -144,22 +153,28 @@ public class MasterDataUploadService {
                     if (row.getRowNum() == 0) continue;
                     String productName = getString(row.getCell(0));
                     if (productName == null || productName.trim().isEmpty()) continue;
-                    if (productMap.containsKey(productName)) {
-                        throw new RuntimeException("Duplicate product name found: " + productName);
-                    }
-                    ProductMaster product = new ProductMaster();
-                    product.setName(productName);
-                    product.setDescription(getString(row.getCell(1)));
-                    product.setDefaultCommissionPercentage(getDouble(row.getCell(2)) != null ? java.math.BigDecimal.valueOf(getDouble(row.getCell(2))) : java.math.BigDecimal.ZERO);
-                    product.setCompany(companyRepository.findById(companyId).orElse(null));
-                    // Set createdBy/updatedBy from context
+                    if (productMap.containsKey(productName)) continue; // skip within-file duplicates
                     String userIdStr = companyContext.getUserId() != null ? companyContext.getUserId().toString() : "system";
-                    product.setCreatedBy(userIdStr);
-                    product.setUpdatedBy(userIdStr);
-                    // set other fields as needed
+                    java.util.List<ProductMaster> existingList = productMasterRepository.findByNameIgnoreCaseAndCompanyIdAndIsActiveTrue(productName.trim(), companyId);
+                    ProductMaster product;
+                    if (!existingList.isEmpty()) {
+                        product = existingList.get(0);
+                        product.setDescription(getString(row.getCell(1)));
+                        product.setDefaultCommissionPercentage(getDouble(row.getCell(2)) != null ? java.math.BigDecimal.valueOf(getDouble(row.getCell(2))) : product.getDefaultCommissionPercentage());
+                        product.setUpdatedBy(userIdStr);
+                        updatedProducts++;
+                    } else {
+                        product = new ProductMaster();
+                        product.setName(productName);
+                        product.setDescription(getString(row.getCell(1)));
+                        product.setDefaultCommissionPercentage(getDouble(row.getCell(2)) != null ? java.math.BigDecimal.valueOf(getDouble(row.getCell(2))) : java.math.BigDecimal.ZERO);
+                        product.setCompany(companyRepository.findById(companyId).orElse(null));
+                        product.setCreatedBy(userIdStr);
+                        product.setUpdatedBy(userIdStr);
+                        totalProducts++;
+                    }
                     ProductMaster savedProduct = productMasterRepository.save(product);
-                    productMap.put(savedProduct.getName(), savedProduct);
-                    totalProducts++;
+                    productMap.put(savedProduct.getName().trim().toLowerCase(), savedProduct);
                 }
             }
 
@@ -170,23 +185,30 @@ public class MasterDataUploadService {
                     if (row.getRowNum() == 0) continue;
                     String medicalName = getString(row.getCell(0));
                     if (medicalName == null || medicalName.trim().isEmpty()) continue;
-                    if (medicalMap.containsKey(medicalName)) {
-                        throw new RuntimeException("Duplicate medical name found: " + medicalName);
-                    }
-                    MedicalMaster medical = new MedicalMaster();
-                    medical.setName(medicalName);
-                    medical.setAddress(getString(row.getCell(1)));
-                    medical.setPhoneNumber(getString(row.getCell(2)));
-                    medical.setEmail(getString(row.getCell(3)));
-                    medical.setCompany(companyRepository.findById(companyId).orElse(null));
-                    // Set createdBy/updatedBy from context
+                    if (medicalMap.containsKey(medicalName)) continue; // skip within-file duplicates
                     String userIdStr = companyContext.getUserId() != null ? companyContext.getUserId().toString() : "system";
-                    medical.setCreatedBy(userIdStr);
-                    medical.setUpdatedBy(userIdStr);
-                    // set other fields as needed
+                    java.util.List<MedicalMaster> existingList = medicalMasterRepository.findByNameIgnoreCaseAndCompanyIdAndIsActiveTrue(medicalName.trim(), companyId);
+                    MedicalMaster medical;
+                    if (!existingList.isEmpty()) {
+                        medical = existingList.get(0);
+                        medical.setAddress(getString(row.getCell(1)));
+                        medical.setPhoneNumber(getString(row.getCell(2)));
+                        medical.setEmail(getString(row.getCell(3)));
+                        medical.setUpdatedBy(userIdStr);
+                        updatedMedicals++;
+                    } else {
+                        medical = new MedicalMaster();
+                        medical.setName(medicalName);
+                        medical.setAddress(getString(row.getCell(1)));
+                        medical.setPhoneNumber(getString(row.getCell(2)));
+                        medical.setEmail(getString(row.getCell(3)));
+                        medical.setCompany(companyRepository.findById(companyId).orElse(null));
+                        medical.setCreatedBy(userIdStr);
+                        medical.setUpdatedBy(userIdStr);
+                        totalMedicals++;
+                    }
                     MedicalMaster savedMedical = medicalMasterRepository.save(medical);
-                    medicalMap.put(savedMedical.getName(), savedMedical);
-                    totalMedicals++;
+                    medicalMap.put(savedMedical.getName().trim().toLowerCase(), savedMedical);
                 }
             }
 
@@ -203,24 +225,33 @@ public class MasterDataUploadService {
                         medicalName == null || medicalName.trim().isEmpty() ||
                         productName == null || productName.trim().isEmpty()) continue;
 
-                    DoctorMaster doctor = doctorMap.get(doctorName);
-                    MedicalMaster medical = medicalMap.get(medicalName);
-                    ProductMaster product = productMap.get(productName);
+                    DoctorMaster doctor = doctorMap.get(doctorName.trim().toLowerCase());
+                    MedicalMaster medical = medicalMap.get(medicalName.trim().toLowerCase());
+                    ProductMaster product = productMap.get(productName.trim().toLowerCase());
 
                     if (doctor != null && medical != null && product != null) {
-                        CommissionMaster commission = new CommissionMaster();
-                        commission.setDoctor(doctor);
-                        commission.setMedical(medical);
-                        commission.setProduct(product);
-                        commission.setCommissionPercentage(commissionPercent != null ? java.math.BigDecimal.valueOf(commissionPercent) : java.math.BigDecimal.ZERO);
-                        commission.setCompany(companyRepository.findById(companyId).orElse(null));
-                        // Set createdBy/updatedBy from context
                         String userIdStr = companyContext.getUserId() != null ? companyContext.getUserId().toString() : "system";
-                        commission.setCreatedBy(userIdStr);
-                        commission.setUpdatedBy(userIdStr);
-                        // set other fields as needed
+                        java.util.Optional<CommissionMaster> existingCommission =
+                            commissionMasterRepository.findByDoctorDoctorIdAndMedicalMedicalIdAndProductProductIdAndCompanyId(
+                                doctor.getDoctorId(), medical.getMedicalId(), product.getProductId(), companyId);
+                        CommissionMaster commission;
+                        if (existingCommission.isPresent()) {
+                            commission = existingCommission.get();
+                            commission.setCommissionPercentage(commissionPercent != null ? java.math.BigDecimal.valueOf(commissionPercent) : commission.getCommissionPercentage());
+                            commission.setUpdatedBy(userIdStr);
+                            updatedCommissions++;
+                        } else {
+                            commission = new CommissionMaster();
+                            commission.setDoctor(doctor);
+                            commission.setMedical(medical);
+                            commission.setProduct(product);
+                            commission.setCommissionPercentage(commissionPercent != null ? java.math.BigDecimal.valueOf(commissionPercent) : java.math.BigDecimal.ZERO);
+                            commission.setCompany(companyRepository.findById(companyId).orElse(null));
+                            commission.setCreatedBy(userIdStr);
+                            commission.setUpdatedBy(userIdStr);
+                            totalCommissions++;
+                        }
                         commissionMasterRepository.save(commission);
-                        totalCommissions++;
                     }
                 }
             }
@@ -228,10 +259,14 @@ public class MasterDataUploadService {
             // At the end, instead of returning a string, populate the response map
             response.put("companyId", companyId);
             response.put("distributorId", distributorId);
-            response.put("doctorsInserted", totalDoctors);
-            response.put("productsInserted", totalProducts);
-            response.put("medicalsInserted", totalMedicals);
-            response.put("commissionsInserted", totalCommissions);
+            response.put("doctorsCreated", totalDoctors);
+            response.put("doctorsUpdated", updatedDoctors);
+            response.put("productsCreated", totalProducts);
+            response.put("productsUpdated", updatedProducts);
+            response.put("medicalsCreated", totalMedicals);
+            response.put("medicalsUpdated", updatedMedicals);
+            response.put("commissionsCreated", totalCommissions);
+            response.put("commissionsUpdated", updatedCommissions);
             response.put("status", "success");
             log.info("processMasterDataExcel - done: companyId={}, distributorId={}, doctors={}, products={}, medicals={}, commissions={}",
                     companyId, distributorId, totalDoctors, totalProducts, totalMedicals, totalCommissions);

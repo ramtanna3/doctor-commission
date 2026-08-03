@@ -3,6 +3,7 @@ package com.org.app.dcas.controller;
 import com.org.app.dcas.model.CommissionMaster;
 import com.org.app.dcas.model.FileAudit;
 import com.org.app.dcas.service.CommissionService;
+import com.org.app.dcas.context.CompanyContext;
 import com.org.app.dcas.dto.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,9 +20,11 @@ public class CommissionController {
     private static final Logger log = LoggerFactory.getLogger(CommissionController.class);
 
     private final CommissionService commissionService;
+    private final CompanyContext companyContext;
 
-    public CommissionController(CommissionService commissionService) {
+    public CommissionController(CommissionService commissionService, CompanyContext companyContext) {
         this.commissionService = commissionService;
+        this.companyContext = companyContext;
     }
 
     @PostMapping("/create-with-products")
@@ -35,8 +38,8 @@ public class CommissionController {
     @PostMapping("/process-sales-excel")
     public ResponseEntity<FileAudit> processSalesExcel(
             @RequestParam("file") MultipartFile file,
-            @RequestParam("distributorId") Long distributorId,
-            @RequestHeader(value = "x-user-id") Long userId) {
+            @RequestParam("distributorId") Long distributorId) {
+        Long userId = companyContext.getUserId();
         String fileName = file.getOriginalFilename();
         log.info("POST /api/commissions/process-sales-excel - file='{}', distributorId={}, userId={}, size={} bytes",
                 fileName, distributorId, userId, file.getSize());

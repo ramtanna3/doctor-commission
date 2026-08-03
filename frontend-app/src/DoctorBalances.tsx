@@ -15,6 +15,7 @@ import Checkbox from '@mui/material/Checkbox';
 import Button from '@mui/material/Button';
 import LoadingSpinner from './components/LoadingSpinner';
 import GlobalSnackbar from './components/GlobalSnackbar';
+import SuccessDialog from './components/SuccessDialog';
 import Box from '@mui/material/Box';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import Select from '@mui/material/Select';
@@ -29,6 +30,7 @@ export default function DoctorBalances() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -149,7 +151,7 @@ export default function DoctorBalances() {
           />
           {loading && <LoadingSpinner />}
           <GlobalSnackbar open={!!error} message={error || ''} severity="error" onClose={() => setError(null)} />
-          <GlobalSnackbar open={!!success} message={success || ''} severity="success" onClose={() => setSuccess(null)} />
+          <SuccessDialog open={showSuccessDialog} message={success || ''} onClose={() => { setShowSuccessDialog(false); setSuccess(null); }} />
           <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
             <Button
               variant="contained"
@@ -172,7 +174,8 @@ export default function DoctorBalances() {
                   });
                   if (!res.ok) throw new Error('Failed to payout commission');
                   const msg = await res.text();
-                  setSuccess(msg);
+                  setSuccess(msg || 'Payout completed successfully!');
+                  setShowSuccessDialog(true);
                   setSelected([]);
                   await fetchBalances();
                 } catch (e: any) {

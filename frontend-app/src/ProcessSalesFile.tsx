@@ -17,7 +17,6 @@ import WarningIcon from '@mui/icons-material/Warning';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import GlobalSnackbar from './components/GlobalSnackbar';
-import SuccessDialog from './components/SuccessDialog';
 import LoadingSpinner from './components/LoadingSpinner';
 
 export default function ProcessSalesFile({ onSuccess }: { onSuccess?: () => void }) {
@@ -25,8 +24,6 @@ export default function ProcessSalesFile({ onSuccess }: { onSuccess?: () => void
   const [distributors, setDistributors] = useState<any[]>([]);
   const [selectedDistributor, setSelectedDistributor] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<number>(0);
   const [apiResponse, setApiResponse] = useState<any>(null);
@@ -45,7 +42,6 @@ export default function ProcessSalesFile({ onSuccess }: { onSuccess?: () => void
     if (e.target.files?.[0]) {
       setFile(e.target.files[0]);
       setError(null);
-      setSuccess(null);
     }
   };
 
@@ -54,7 +50,6 @@ export default function ProcessSalesFile({ onSuccess }: { onSuccess?: () => void
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       setFile(e.dataTransfer.files[0]);
       setError(null);
-      setSuccess(null);
     }
   };
 
@@ -65,7 +60,6 @@ export default function ProcessSalesFile({ onSuccess }: { onSuccess?: () => void
   const handleRemoveFile = () => {
     setFile(null);
     setError(null);
-    setSuccess(null);
     if (inputRef.current) inputRef.current.value = '';
   };
 
@@ -79,7 +73,6 @@ export default function ProcessSalesFile({ onSuccess }: { onSuccess?: () => void
     setLoading(true);
     setProgress(30);
     setError(null);
-    setSuccess(null);
     setApiResponse(null);
     const formData = new FormData();
     formData.append('file', file);
@@ -94,12 +87,7 @@ export default function ProcessSalesFile({ onSuccess }: { onSuccess?: () => void
       const data = await res.json();
       setApiResponse(data);
       setProgress(100);
-      // Only show success if at least one count is not null and no errors
-      if ([data.totalRows, data.successCount, data.nigoCount, data.unmatchedCount, data.errorCount].some(v => v != null) && !(data.errors && data.errors.length > 0)) {
-        setSuccess('Sales file processed successfully!');
-        setShowSuccessDialog(true);
-        if (onSuccess) onSuccess();
-      }
+      if (onSuccess) onSuccess();
       setFile(null);
       setSelectedDistributor('');
       if (inputRef.current) inputRef.current.value = '';
@@ -198,7 +186,6 @@ export default function ProcessSalesFile({ onSuccess }: { onSuccess?: () => void
           </form>
           {loading && <LoadingSpinner />}
           <GlobalSnackbar open={!!error} message={error || ''} severity="error" onClose={() => setError(null)} />
-          <SuccessDialog open={showSuccessDialog} message={success || ''} onClose={() => setShowSuccessDialog(false)} />
           {apiResponse && (
             <Card sx={{ mt: 4, background: '#f8f8f8', borderRadius: 2, boxShadow: 0 }}>
               <CardContent>

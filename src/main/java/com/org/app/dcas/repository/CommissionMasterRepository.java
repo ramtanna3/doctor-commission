@@ -15,4 +15,7 @@ public interface CommissionMasterRepository extends JpaRepository<CommissionMast
     List<CommissionMaster> findByCompanyIdAndIsActiveTrue(Long companyId);
 
     Optional<CommissionMaster> findByCommissionIdAndCompanyId(Long commissionId, Long companyId);
+
+    Optional<CommissionMaster> findByDoctorDoctorIdAndMedicalMedicalIdAndProductProductIdAndCompanyId(
+            Long doctorId, Long medicalId, Long productId, Long companyId);
 }

@@ -11,12 +11,14 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import IconButton from '@mui/material/IconButton';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LinearProgress from '@mui/material/LinearProgress';
+import Divider from '@mui/material/Divider';
 
 function BulkMasterUpload({ onSuccess }: { onSuccess?: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [uploadResult, setUploadResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -68,10 +70,11 @@ function BulkMasterUpload({ onSuccess }: { onSuccess?: () => void }) {
       });
       setProgress(80);
       if (!res.ok) throw new Error('Upload failed');
+      const data = await res.json().catch(() => ({}));
+      setUploadResult(data);
       setProgress(100);
-      setSuccess('Upload successful!');
+      setSuccess('Master data uploaded successfully!');
       setShowSuccessDialog(true);
-      if (onSuccess) onSuccess();
       setFile(null);
       if (inputRef.current) inputRef.current.value = '';
     } catch (e: any) {
@@ -143,7 +146,30 @@ function BulkMasterUpload({ onSuccess }: { onSuccess?: () => void }) {
             </Button>
           </form>
           <GlobalSnackbar open={!!error} message={error || ''} severity="error" onClose={() => setError(null)} />
-          <SuccessDialog open={showSuccessDialog} message={success || ''} onClose={() => setShowSuccessDialog(false)} />
+          <SuccessDialog
+            open={showSuccessDialog}
+            message={success || ''}
+            onClose={() => { setShowSuccessDialog(false); setUploadResult(null); if (onSuccess) onSuccess(); }}
+            details={uploadResult ? (
+              <Box sx={{ mt: 1 }}>
+                <Divider sx={{ mb: 1.5 }} />
+                {[
+                  { label: 'Doctors',    created: uploadResult.doctorsCreated,    updated: uploadResult.doctorsUpdated },
+                  { label: 'Products',   created: uploadResult.productsCreated,   updated: uploadResult.productsUpdated },
+                  { label: 'Medicals',   created: uploadResult.medicalsCreated,   updated: uploadResult.medicalsUpdated },
+                  { label: 'Commissions',created: uploadResult.commissionsCreated,updated: uploadResult.commissionsUpdated },
+                ].map(row => (
+                  <Box key={row.label} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#444', minWidth: 110 }}>{row.label}</Typography>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <Typography variant="body2" sx={{ color: '#2e7d32' }}>+{row.created ?? 0} created</Typography>
+                      <Typography variant="body2" sx={{ color: '#1565c0' }}>{row.updated ?? 0} updated</Typography>
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            ) : undefined}
+          />
         </CardContent>
       </Card>
     </Box>
